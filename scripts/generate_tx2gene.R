@@ -23,7 +23,7 @@ tx2gene$ensembl_gene_id <- sub("\\..*$", "", tx2gene$ensembl_gene_id)
 # Write to a tab-separated file
 write.table(
   tx2gene,
-  file = "tx2gene.tsv",
+  file = "reference/tx2gene.tsv",
   sep = "\t",
   quote = FALSE,
   row.names = FALSE,

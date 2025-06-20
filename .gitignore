@@ -1,5 +1,5 @@
 .nextflow
 .nextflow.log*
 work/
-reference/
+old_reference/
 data/
