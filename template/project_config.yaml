@@ -1,0 +1,13 @@
+# project information
+metadata_file: ./data/<project_name>/metadata/sample_metadata.tsv # modify project name
+comparisons:
+  - name: treatment_vs_control
+    control: control
+    non_control: treatment
+
+# quantification
+kallisto_index: ./reference/transcripts.GRCh38.113.fa.idx
+kallisto_threads: 4
+
+# differential expression analysis
+de_method: "edgeR"

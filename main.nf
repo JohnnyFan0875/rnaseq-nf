@@ -1,5 +1,3 @@
-// usage: nextflow run main.nf --project_name project_1 -with-docker -resume
-
 nextflow.enable.dsl=2
 
 // Include modules
