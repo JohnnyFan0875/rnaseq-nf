@@ -84,7 +84,7 @@ rna_seq_pipeline/
    rm reference/transcripts.GRCh38.113.fa reference/Homo_sapiens.GRCh38.113.gtf
    ```
 
-   2. tx2gene.tsv (optional)
+   2. tx2gene.tsv (optional)  
       The reference file tx2gene.tsv is already in reference folder. If you need the latest tx2gene file, you can run
 
       ```bash
@@ -124,14 +124,14 @@ rna_seq_pipeline/
    - sample_id = name of raw fastq file without extension
    - Example:
 
-   | sample_id      | group     | replicate |
-   | -------------- | --------- | --------- |
-   | control_rep1   | control   | 1         |
-   | control_rep2   | control   | 2         |
-   | control_rep3   | control   | 3         |
-   | treatment_rep1 | treatment | 1         |
-   | treatment_rep2 | treatment | 2         |
-   | treatment_rep3 | treatment | 3         |
+     | sample_id      | group     | replicate |
+     | -------------- | --------- | --------- |
+     | control_rep1   | control   | 1         |
+     | control_rep2   | control   | 2         |
+     | control_rep3   | control   | 3         |
+     | treatment_rep1 | treatment | 1         |
+     | treatment_rep2 | treatment | 2         |
+     | treatment_rep3 | treatment | 3         |
 
 4. Modify project_config.yaml
 
@@ -160,7 +160,7 @@ rna_seq_pipeline/
 ## Usage
 
 ```bash
-nextflow run main.nf --project_name project_1 -with-docker -resume
+nextflow run main.nf --project_name <project_name> -with-docker -resume
 ```
 
 - `-resume`: optional, resume the workflow from where it left off in a previous run. It skips completed tasks and avoids re-running steps
