@@ -84,6 +84,8 @@ rna_seq_pipeline/
    rm reference/transcripts.GRCh38.113.fa reference/Homo_sapiens.GRCh38.113.gtf
    ```
 
+   - alternatives: [kb ref](https://www.kallistobus.tools/kb_usage/kb_ref/)
+
    2. tx2gene.tsv (optional)  
       The reference file tx2gene.tsv is already in reference folder. If you need the latest tx2gene file, you can run
 
