@@ -6,7 +6,7 @@
 
 ## Pipeline Summary
 
-Input: Paired-end FASTQ files + project metadata/config  
+Input: Paired-end FASTQ files + project metadata/config files  
 Output: Quality reports, expression quantification, DEG tables, GSEA/ORA results
 
 Main Steps:
@@ -23,75 +23,40 @@ Main Steps:
 
 ```bash
 rna_seq_pipeline/
-├── main.nf                               # Main Nextflow pipeline script
-├── nextflow.config                       # System-wide Nextflow configuration
-├── modules/                              # Modular Nextflow process scripts
-├── containers/                           # Dockerfiles
+├── main.nf                                   # Main Nextflow pipeline script
+├── nextflow.config                           # System-wide Nextflow configuration
+├── modules/                                  # Modular Nextflow process scripts
+├── images/                                   # Dockerfiles
+├── scripts/                                  # Bash and R scripts
+├── reference/                                # GTF, reference fasta, kallisto index files
 ├── data/
 │   └── project_name/
-│       ├── raw/                          # Raw FASTQ files
+│       ├── raw/   
+│       │   ├── test_control_R1.fastq.gz    # Raw FASTQ files
+│       │   ├── test_control_R2.fastq.gz    # Raw FASTQ files
+│       │   ├── test_treatment_R2.fastq.gz  # Raw FASTQ files
+│       │   └── test_treatment_R2.fastq.gz  # Raw FASTQ files
 │       ├── config/
-│       │   └── project_config.yaml       # Project-specific YAML config
+│       │   └── project_config.yaml           # Project-specific YAML config
 │       ├── metadata/
-│       │   └── sample_metadata.tsv       # Tab-separated metadata file
+│       │   └── sample_metadata.tsv           # Tab-separated metadata file
 │       └── results/
-│           ├── fastqc_pre/               # FASTQC results (before trimming)
-│           ├── fastp_trim/               # Trimming FASTQ files
-│           ├── fastqc_post/              # FASTQC results (after trimming)
-│           ├── multiqc/                  # Aggregated QC reports
-│           ├── kallisto_quant/           # Transcript quantification
-│           ├── de_analysis/              # Differential expression analysis
-│           ├── gsea_results/             # GSEA enrichment results
-│           └── ora_results/              # Over-representation analysis results
+│           ├── fastqc_pre/                   # FASTQC results (before trimming)
+│           ├── fastp_trim/                   # Trimming FASTQ files
+│           ├── fastqc_post/                  # FASTQC results (after trimming)
+│           ├── multiqc/                      # Aggregated QC reports
+│           ├── kallisto_quant/               # Transcript quantification
+│           ├── de_analysis/                  # Differential expression analysis
+│           ├── gsea_results/                 # GSEA enrichment results
+│           └── ora_results/                  # Over-representation analysis results
 └── README.md
 ```
 
 ## Install
 
-1. Install Nextflow (>=24.10.5) from [official website](https://www.nextflow.io/docs/latest/install.html#install-nextflow)
-2. Install Docker (>=28.0.1) from [official website](https://docs.docker.com/desktop/)
-3. Install required package
-   ```bash
-   apt install kallisto gffread
-   ```
-4. Create Docker Image
-   ```bash
-   docker build -t de_analysis -f containers/de_analysis.dockerfile containers
-   docker build -t enrichment_analysis -f containers/enrichment.dockerfile containers
-   ```
-5. Create Reference Files
-
-   1. kallisto index
-
-   ```bash
-   # Download GTF file
-   wget -P reference/ https://ftp.ensembl.org/pub/release-113/gtf/homo_sapiens/Homo_sapiens.GRCh38.113.gtf.gz
-
-   # Download FASTA file
-   wget -P reference/ https://ftp.ensembl.org/pub/release-113/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz
-
-   # Unzip gzip files
-   gunzip reference/Homo_sapiens.GRCh38.113.gtf.gz
-   gunzip reference/Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz
-
-   # Extract transcript sequence
-   gffread -w reference/transcripts.GRCh38.113.fa -g reference/Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz reference/Homo_sapiens.GRCh38.113.gtf.gz
-
-   # Build Kallisto index
-   kallisto index -i reference/transcripts.GRCh38.113.fa.idx reference/transcripts.GRCh38.113.fa
-
-   # Remove unrelated files
-   rm reference/transcripts.GRCh38.113.fa reference/Homo_sapiens.GRCh38.113.gtf
-   ```
-
-   - alternatives: [kb ref](https://www.kallistobus.tools/kb_usage/kb_ref/)
-
-   2. tx2gene.tsv (optional)  
-      The reference file tx2gene.tsv is already in reference folder. If you need the latest tx2gene file, you can run
-
-      ```bash
-      Rscript scripts/generate_tx2gene.R
-      ```
+```bash
+bash scripts/install.sh
+```
 
 ## Customize project metadata/config
 
@@ -110,62 +75,28 @@ rna_seq_pipeline/
 
 2. Prepare raw data
 
-   - Put your raw fastq.gz files into `data/<project_name>/raw`
-   - Require pair-end fastq.gz files
-   - For example,
-     - control_rep1_R1.fastq.gz, control_rep1_R2.fastq.gz
-     - control_rep2_R1.fastq.gz, control_rep2_R2.fastq.gz
-     - control_rep3_R1.fastq.gz, control_rep3_R2.fastq.gz
-     - treatment_rep1_R1.fastq.gz, treatment_rep1_R2.fastq.gz
-     - treatment_rep2_R1.fastq.gz, treatment_rep2_R2.fastq.gz
-     - treatment_rep3_R1.fastq.gz, treatment_rep3_R2.fastq.gz
+   - Location: data/`project_name`/raw
+   - Require **pair-end** fastq.gz files
 
-3. Modify sample_metadata.tsv
+3. Modify sample_metadata.csv
 
-   - Location: data/<project_name>/sample_metadata.tsv
-   - sample_id = name of raw fastq file without extension
-   - Example:
-
-     | sample_id      | group     | replicate |
-     | -------------- | --------- | --------- |
-     | control_rep1   | control   | 1         |
-     | control_rep2   | control   | 2         |
-     | control_rep3   | control   | 3         |
-     | treatment_rep1 | treatment | 1         |
-     | treatment_rep2 | treatment | 2         |
-     | treatment_rep3 | treatment | 3         |
+   - Location: data/`project_name`/sample_metadata.csv
+   - Format: fastq_R1,fastq_R2,sample_name,group_name,replicate
+   - Example: test_R1.fastq.gz,test_R2.fastq.gz,test,control,1
 
 4. Modify project_config.yaml
 
-   - Location: data/<project_name>/project_config.yaml
-   - Example:
-
-   ```text
-    # project information
-    metadata_file: ./data/<project_name>/metadata/sample_metadata.tsv
-    comparisons:
-    - name: treatment_vs_control
-        control: control
-        non_control: treatment
-
-    # quantification
-    kallisto_index: ./reference/transcriptome_index_v13.idx
-    kallisto_threads: 4
-
-    # differential expression analysis
-    de_method: "edgeR"
-   ```
-
-   - comparisons: names is used for output file name
-   - comparisons: control/non-control is referred to `sample_metadata.tsv` **group** column
+   - Location: data/`project_name`/project_config.yaml
 
 ## Usage
 
 ```bash
-nextflow run main.nf --project_name <project_name> -with-docker -resume
+nextflow run main.nf --project_name <project_name> -with-docker [-resume]
 ```
 
-- `-resume`: optional, resume the workflow from where it left off in a previous run. It skips completed tasks and avoids re-running steps
+- `-resume` (optional)
+  - Resume the workflow from where it left off in a previous run.
+  - It skips completed tasks and avoids re-running steps.
 
 ## Others
 

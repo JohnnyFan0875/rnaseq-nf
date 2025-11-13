@@ -1,13 +1,14 @@
-# project information
-metadata_file: ./data/<project_name>/metadata/sample_metadata.tsv # modify project name
+# Project information
+metadata_file: ./data/<project_name>/metadata/sample_metadata.tsv   # Metadata file path; replace <project_name>
+
 comparisons:
-  - name: treatment_vs_control
-    control: control
-    non_control: treatment
+  - name: treatment_vs_control                                      # Comparison name used in visualization
+    control: control                                                # Control group name from metadata
+    non_control: treatment                                          # Non-control group name from metadata
 
-# quantification
-kallisto_index: ./reference/transcripts.GRCh38.113.fa.idx
-kallisto_threads: 4
+# Quantification settings
+kallisto_index: ./reference/transcripts.GRCh38.113.fa.idx           # Path to kallisto index file
+kallisto_threads: 4                                                 # Number of threads for kallisto
 
-# differential expression analysis
-de_method: "edgeR"
+# Differential expression analysis
+de_method: edgeR                                                    # Differential expression method: edgeR or DESeq2 (DESeq2 not yet implemented)

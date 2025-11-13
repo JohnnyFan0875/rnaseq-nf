@@ -1,1 +1,1 @@
-sample_id	group	replicate
+fastq1,fastq2,sample_name,group,replicate
