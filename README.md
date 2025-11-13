@@ -32,10 +32,10 @@ rna_seq_pipeline/
 ├── data/
 │   └── project_name/
 │       ├── raw/   
-│       │   ├── test_control_R1.fastq.gz    # Raw FASTQ files
-│       │   ├── test_control_R2.fastq.gz    # Raw FASTQ files
-│       │   ├── test_treatment_R2.fastq.gz  # Raw FASTQ files
-│       │   └── test_treatment_R2.fastq.gz  # Raw FASTQ files
+│       │   ├── test_control_R1.fastq.gz      # Raw FASTQ files
+│       │   ├── test_control_R2.fastq.gz      # Raw FASTQ files
+│       │   ├── test_treatment_R2.fastq.gz    # Raw FASTQ files
+│       │   └── test_treatment_R2.fastq.gz    # Raw FASTQ files
 │       ├── config/
 │       │   └── project_config.yaml           # Project-specific YAML config
 │       ├── metadata/
