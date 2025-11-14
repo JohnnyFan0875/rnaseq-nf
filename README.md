@@ -32,10 +32,10 @@ rna_seq_pipeline/
 ├── data/
 │   └── project_name/
 │       ├── raw/   
-│       │   ├── test_control_R1.fastq.gz      # Raw FASTQ files
-│       │   ├── test_control_R2.fastq.gz      # Raw FASTQ files
-│       │   ├── test_treatment_R2.fastq.gz    # Raw FASTQ files
-│       │   └── test_treatment_R2.fastq.gz    # Raw FASTQ files
+│       │   ├── sample_control_R1.fastq.gz    # Raw FASTQ files
+│       │   ├── sample_control_R2.fastq.gz    # Raw FASTQ files
+│       │   ├── sample_treatment_R2.fastq.gz  # Raw FASTQ files
+│       │   └── sample_treatment_R2.fastq.gz  # Raw FASTQ files
 │       ├── config/
 │       │   └── project_config.yaml           # Project-specific YAML config
 │       ├── metadata/
@@ -57,6 +57,9 @@ rna_seq_pipeline/
 ```bash
 bash scripts/install.sh
 ```
+
+- Detailed kallisto index creation can be referred to [kallisto_index.sh](./scripts/kallisto_index.sh)
+- Alternative kallisto index creation method: [kb_ref](https://www.kallistobus.tools/kb_usage/kb_ref/)  
 
 ## Customize project metadata/config
 
@@ -81,8 +84,8 @@ bash scripts/install.sh
 3. Modify sample_metadata.csv
 
    - Location: data/`project_name`/sample_metadata.csv
-   - Format: fastq_R1,fastq_R2,sample_name,group_name,replicate
-   - Example: test_R1.fastq.gz,test_R2.fastq.gz,test,control,1
+   - Format: sample_id,fastq_R1,fastq_R2,group_name,replicate
+   - Example: sample_control,sample_control_R1.fastq.gz,sample_control_R2.fastq.gz,control,1
 
 4. Modify project_config.yaml
 

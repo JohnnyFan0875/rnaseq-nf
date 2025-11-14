@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Define file paths
+# Define file paths and names
 GTF_GZ="reference/Homo_sapiens.GRCh38.113.gtf.gz"
 FASTA_GZ="reference/Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz"
 GTF="reference/Homo_sapiens.GRCh38.113.gtf"
@@ -8,49 +8,26 @@ FASTA="reference/Homo_sapiens.GRCh38.dna.primary_assembly.fa"
 TRANSCRIPTS="reference/transcripts.GRCh38.113.fa"
 KALLISTO_IDX="reference/transcripts.GRCh38.113.fa.idx"
 
-# Create reference directory if not exists
+# Create reference directory if it doesn't exist
 mkdir -p reference
 
-# Download GTF if not exists
-if [ ! -f "$GTF_GZ" ] && [ ! -f "$GTF" ]; then
-    wget -P reference/ https://ftp.ensembl.org/pub/release-113/gtf/homo_sapiens/Homo_sapiens.GRCh38.113.gtf.gz
-else
-    echo "GTF file already downloaded."
-fi
+# Download the GTF and FASTA files from Ensembl FTP
+wget -P reference/ https://ftp.ensembl.org/pub/release-113/gtf/homo_sapiens/Homo_sapiens.GRCh38.113.gtf.gz
+wget -P reference/ https://ftp.ensembl.org/pub/release-113/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz
 
-# Download FASTA if not exists
-if [ ! -f "$FASTA_GZ" ] && [ ! -f "$FASTA" ]; then
-    wget -P reference/ https://ftp.ensembl.org/pub/release-113/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz
-else
-    echo "FASTA file already downloaded."
-fi
+# Decompress the downloaded files while keeping the original compressed files
+gunzip -k "$GTF_GZ"
+gunzip -k "$FASTA_GZ"
 
-# Unzip GTF if uncompressed GTF not exists but gz exists
-if [ ! -f "$GTF" ] && [ -f "$GTF_GZ" ]; then
-    gunzip -k "$GTF_GZ"
-else
-    echo "GTF file already uncompressed."
-fi
+# Generate transcript fasta file from GTF and genome fasta using gffread in Docker
+docker run -it --rm -v "$(pwd)/reference/:/mnt/" zavolab/gffread:0.11.7-slim \
+    gffread -w /mnt/$(basename "$TRANSCRIPTS") -g /mnt/$(basename "$FASTA") /mnt/$(basename "$GTF")
 
-# Unzip FASTA if uncompressed FASTA not exists but gz exists
-if [ ! -f "$FASTA" ] && [ -f "$FASTA_GZ" ]; then
-    gunzip -k "$FASTA_GZ"
-else
-    echo "FASTA file already uncompressed."
-fi
+# Build kallisto index from the generated transcripts fasta using kallisto Docker image
+docker run -it --rm -v "$(pwd)/reference/:/mnt/" quay.io/biocontainers/kallisto:0.50.1--h6de1650_2 \
+    kallisto index -i /mnt/$(basename "$KALLISTO_IDX") /mnt/$(basename "$TRANSCRIPTS")
 
-# Extract transcript sequence if output not exists
-if [ ! -f "$TRANSCRIPTS" ]; then
-    gffread -w "$TRANSCRIPTS" -g "$FASTA" "$GTF"
-else
-    echo "Transcript FASTA already exists."
-fi
-
-# Build Kallisto index if not exists
-if [ ! -f "$KALLISTO_IDX" ]; then
-    kallisto index -i "$KALLISTO_IDX" "$TRANSCRIPTS"
-else
-    echo "Kallisto index already exists."
-fi
-
-# alternative: kb ref (https://www.kallistobus.tools/kb_usage/kb_ref/)
+# Clean up temporary files
+rm "$FASTA"
+rm "$GTF_GZ"
+rm "$FASTA_GZ"
