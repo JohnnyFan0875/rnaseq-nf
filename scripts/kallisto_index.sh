@@ -52,3 +52,5 @@ if [ ! -f "$KALLISTO_IDX" ]; then
 else
     echo "Kallisto index already exists."
 fi
+
+# alternative: kb ref (https://www.kallistobus.tools/kb_usage/kb_ref/)

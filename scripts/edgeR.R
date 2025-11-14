@@ -23,7 +23,7 @@ cat('Starting edgeR differential expression analysis\n')
 source(file.path(opt$script_dir, "plot_utils_de.R"))
 
 # Read metadata
-metadata <- read_tsv(opt$metadata)
+metadata <- read_csv(opt$metadata)
 rownames(metadata) <- metadata$sample_id
 
 # Construct file paths for abundance files

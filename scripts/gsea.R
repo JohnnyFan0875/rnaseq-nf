@@ -27,33 +27,11 @@ cat('Starting gsea analysis\n')
 source(file.path(opt$script_dir, "plot_utils_enrichment.R"))
 
 # Read metadata
-metadata <- read_tsv(opt$metadata)
+metadata <- read_csv(opt$metadata)
 rownames(metadata) <- metadata$sample_id
 
 # Parse comparisons JSON string
 comparisons <- fromJSON(opt$comparisons) %>% split(seq(nrow(.)))
-
-# for testing in Rstudio
-# yaml_data <- yaml::read_yaml("D:\\shared\\rna_seq_pipeline\\data\\project_1\\config\\project_config.yaml")
-# json_data <- jsonlite::toJSON(yaml_data, pretty = TRUE, auto_unbox = TRUE)
-# opt <- list(
-#   deg_dir = "D:\\shared\\rna_seq_pipeline\\data\\project_1\\results\\de_analysis\\DEG_edgeR",
-#   metadata = "D:\\shared\\rna_seq_pipeline\\data\\project_1\\metadata\\sample_metadata.tsv",
-#   out_dir = "D:\\shared\\rna_seq_pipeline\\data\\project_1\\results\\gsea_results",
-#   script_dir = "D:\\shared\\rna_seq_pipeline\\scripts",
-#   comparisons = json_data,
-#   de_method = "edgeR",
-#   organism = "human"
-# )
-# parsed_list <- fromJSON(opt$comparisons)
-# comparisons_df <- parsed_list$comparisons
-# comparisons <- split(comparisons_df, seq(nrow(comparisons_df)))
-# 
-# source(file.path(opt$script_dir, "plot_utils_enrichment.R"))
-# 
-# # Read metadata
-# metadata <- read_tsv(opt$metadata)
-# rownames(metadata) <- metadata$sample_id
 
 set.seed(123)
 

@@ -27,7 +27,7 @@ cat('Starting ora analysis\n')
 source(file.path(opt$script_dir, "plot_utils_enrichment.R"))
 
 # Read metadata
-metadata <- read_tsv(opt$metadata)
+metadata <- read_csv(opt$metadata)
 rownames(metadata) <- metadata$sample_id
 
 # Parse comparisons JSON string
@@ -38,34 +38,6 @@ convert_to_entrez <- function(genes) {
   gene_df <- bitr(genes, fromType = "SYMBOL", toType = "ENTREZID", OrgDb = org.Hs.eg.db)
   unique(gene_df$ENTREZID)
 }
-
-# # for testing in Rstudio
-# yaml_data <- yaml::read_yaml("D:\\shared\\rna_seq_pipeline\\data\\project_1\\config\\project_config.yaml")
-# json_data <- jsonlite::toJSON(yaml_data, pretty = TRUE, auto_unbox = TRUE)
-# opt <- list(
-#   deg_dir = "D:\\shared\\rna_seq_pipeline\\data\\project_1\\results\\de_analysis\\DEG_edgeR",
-#   metadata = "D:\\shared\\rna_seq_pipeline\\data\\project_1\\metadata\\sample_metadata.tsv",
-#   out_dir = "D:\\shared\\rna_seq_pipeline\\data\\project_1\\results\\ora_results",
-#   script_dir = "D:\\shared\\rna_seq_pipeline\\scripts",
-#   comparisons = json_data,
-#   de_method = "edgeR",
-#   organism = "human"
-# )
-# parsed_list <- fromJSON(opt$comparisons)
-# comparisons_df <- parsed_list$comparisons
-# comparisons <- split(comparisons_df, seq(nrow(comparisons_df)))
-# 
-# source(file.path(opt$script_dir, "plot_utils_enrichment.R"))
-# 
-# # Read metadata
-# metadata <- read_tsv(opt$metadata)
-# rownames(metadata) <- metadata$sample_id
-# 
-# # Function to convert gene symbols to Entrez IDs
-# convert_to_entrez <- function(genes) {
-#   gene_df <- bitr(genes, fromType = "SYMBOL", toType = "ENTREZID", OrgDb = org.Hs.eg.db)
-#   unique(gene_df$ENTREZID)
-# }
 
 set.seed(123)
 

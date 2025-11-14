@@ -1,5 +1,7 @@
 nextflow.enable.dsl=2
 
+import groovy.json.JsonOutput
+
 // Include modules
 include { fastqc as fastqc_pre } from './modules/fastqc.nf'
 include { fastqc as fastqc_post } from './modules/fastqc.nf'
@@ -15,58 +17,58 @@ if (!params.project_name) {
     error "Please provide a project name using --project_name"
 }
 
-def project_dir = "./data/${params.project_name}"
-def config_path = "${project_dir}/config/project_config.yaml"
-
 def parseYamlFile(path) {
     def yamlText = file(path).text
     def slurper = new groovy.yaml.YamlSlurper()
     return slurper.parseText(yamlText)
 }
 
+def project_dir = "./data/${params.project_name}"
+def config_path = "${project_dir}/config/project_config.yaml"
 def project_cfg = parseYamlFile(config_path)
-
-import groovy.json.JsonOutput
-
-params.project_dir = project_dir
-params.metadata_file = project_cfg.metadata_file
-params.kallisto_index = project_cfg.kallisto_index
-params.kallisto_threads = project_cfg.kallisto_threads ?: 4
-params.de_method = project_cfg.de_method
-params.comparisons = project_cfg.comparisons
-params.result_dir = "${params.project_dir}/results"
-params.comparisons_json = JsonOutput.toJson(project_cfg.comparisons)
+def metadata_file = project_cfg.metadata_file
+def kallisto_index = project_cfg.kallisto_index
+def kallisto_threads = project_cfg.kallisto_threads ?: 4
+def de_method = project_cfg.de_method
+def comparisons = project_cfg.comparisons
+def result_dir = "${project_dir}/results"
+def comparisons_json = JsonOutput.toJson(comparisons)
 
 // main workflow
 workflow {
 
-    // Create a channel for the R script file(s)
-    def edgeR_script = file('scripts/edgeR.R')
-
     samples = Channel
-        .fromPath("${params.metadata_file}")
-        .splitCsv(header: true, sep: '\t')
+        .fromPath("${metadata_file}")
+        .splitCsv(header: true, sep: ',')
         .map { row -> 
             tuple(row.sample_id, 
-                  file("${params.project_dir}/raw/${row.sample_id}_R1.fastq.gz"), 
-                  file("${params.project_dir}/raw/${row.sample_id}_R2.fastq.gz")
+                  file("${project_dir}/raw/${row.fastq1}"), 
+                  file("${project_dir}/raw/${row.fastq2}")
             )
         }
 
     // Pre-trim QC
-    fastqc_pre_out = fastqc_pre(samples, Channel.value("pre"), Channel.value(params.result_dir))
+    fastqc_pre_out = fastqc_pre(samples,
+        Channel.value("pre"),
+        Channel.value(result_dir)
+    )
 
     // Fastp trimming
-    trimmed = fastp(samples, Channel.value(params.result_dir))
+    trimmed = fastp(samples,
+        Channel.value(result_dir)
+    )
 
     // Post-trim QC
-    fastqc_post_out = fastqc_post(trimmed.trimmed_reads, Channel.value("post"), Channel.value(params.result_dir))
+    fastqc_post_out = fastqc_post(trimmed.trimmed_reads,
+        Channel.value("post"),
+        Channel.value(result_dir)
+    )
 
     // Kallisto quantification
     kallisto_out = kallisto(trimmed.trimmed_reads, 
-        file(params.kallisto_index), 
-        Channel.value(params.result_dir),
-        Channel.value(params.kallisto_threads)
+        file(kallisto_index), 
+        Channel.value(result_dir),
+        Channel.value(kallisto_threads)
     )
 
     // multiqc (without post-trimming fastqc)
@@ -76,15 +78,15 @@ workflow {
         .mix(kallisto_out.quant_log)
         .collect()
 
-    multiqc(all_qc_reports, Channel.value(params.result_dir))
+    multiqc(all_qc_reports, Channel.value(result_dir))
 
     // Differential expression analysis
     de_results = de_analysis(
-        file("${params.result_dir}/kallisto_quant"),
-        file(params.metadata_file),
-        Channel.value(params.comparisons_json),
-        Channel.value(params.de_method),
-        Channel.value(params.result_dir),
+        file("${result_dir}/kallisto_quant"),
+        file(metadata_file),
+        Channel.value(comparisons_json),
+        Channel.value(de_method),
+        Channel.value(result_dir),
         file("scripts/"),
         file("reference/")
     )
@@ -93,10 +95,10 @@ workflow {
     enrichment_inputs = de_results.deg_results
         .map { deg_dir -> tuple(
             deg_dir,
-            file(params.metadata_file),
-            params.comparisons_json,
-            params.result_dir,
-            params.de_method,
+            file(metadata_file),
+            comparisons_json,
+            result_dir,
+            de_method,
             file("scripts/")
         )}
 

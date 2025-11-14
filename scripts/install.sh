@@ -15,20 +15,15 @@ if ! command -v docker &> /dev/null; then
   exit 1
 fi
 
-# Install required packages kallisto and gffread
-echo "Installing required packages: kallisto, gffread..."
-sudo apt update
-sudo apt install -y kallisto gffread
-
 # Pull required Docker images
 echo "Pulling Docker images..."
 docker pull johnnyfan0875/de_analysis:0.1.0
 docker pull johnnyfan0875/enrichment_analysis:0.1.0
 
-# Run kallisto index creation script
-echo "Creating kallisto index..."
-bash scripts/kallisto_index.sh
-# alternative: kb ref (https://www.kallistobus.tools/kb_usage/kb_ref/)
+# Download reference file
+echo "Downloading reference files..."
+
+
 
 echo ""
 echo "Optional: To get the latest tx2gene.tsv file, run:"
