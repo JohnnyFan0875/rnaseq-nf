@@ -23,32 +23,30 @@ Main Steps:
 
 ```bash
 rna_seq_pipeline/
-├── main.nf                                   # Main Nextflow pipeline script
-├── nextflow.config                           # System-wide Nextflow configuration
-├── modules/                                  # Modular Nextflow process scripts
-├── images/                                   # Dockerfiles
-├── scripts/                                  # Bash and R scripts
-├── reference/                                # GTF, reference fasta, kallisto index files
+├── main.nf                           # Main Nextflow pipeline script
+├── nextflow.config                   # System-wide Nextflow configuration
+├── modules/                          # Modular Nextflow process scripts
+├── images/                           # Dockerfiles
+├── scripts/                          # Bash and R scripts
+├── reference/                        # GTF, reference fasta, kallisto index files
 ├── data/
-│   └── project_name/
-│       ├── raw/   
-│       │   ├── sample_control_R1.fastq.gz    # Raw FASTQ files
-│       │   ├── sample_control_R2.fastq.gz    # Raw FASTQ files
-│       │   ├── sample_treatment_R2.fastq.gz  # Raw FASTQ files
-│       │   └── sample_treatment_R2.fastq.gz  # Raw FASTQ files
+│   └── test/
+│       ├── raw/
+│       │   ├── sample_R1.fastq.gz    # Raw FASTQ files
+│       │   ├── sample_R2.fastq.gz    # Raw FASTQ files
 │       ├── config/
-│       │   └── project_config.yaml           # Project-specific YAML config
+│       │   └── project_config.yaml   # Project-specific YAML config
 │       ├── metadata/
-│       │   └── sample_metadata.tsv           # Tab-separated metadata file
+│       │   └── sample_metadata.tsv   # Tab-separated metadata file
 │       └── results/
-│           ├── fastqc_pre/                   # FASTQC results (before trimming)
-│           ├── fastp_trim/                   # Trimming FASTQ files
-│           ├── fastqc_post/                  # FASTQC results (after trimming)
-│           ├── multiqc/                      # Aggregated QC reports
-│           ├── kallisto_quant/               # Transcript quantification
-│           ├── de_analysis/                  # Differential expression analysis
-│           ├── gsea_results/                 # GSEA enrichment results
-│           └── ora_results/                  # Over-representation analysis results
+│           ├── fastqc_pre/           # FASTQC results before trimming
+│           ├── fastp_trim/           # Trimming FASTQ files
+│           ├── fastqc_post/          # FASTQC results after trimming
+│           ├── multiqc/              # Aggregated QC reports
+│           ├── kallisto_quant/       # Transcript quantification
+│           ├── de_analysis/          # Differential expression analysis
+│           ├── gsea_results/         # GSEA enrichment results
+│           └── ora_results/          # Over-representation analysis results
 └── README.md
 ```
 
@@ -59,7 +57,7 @@ bash scripts/install.sh
 ```
 
 - Detailed kallisto index creation can be referred to [kallisto_index.sh](./scripts/kallisto_index.sh)
-- Alternative kallisto index creation method: [kb_ref](https://www.kallistobus.tools/kb_usage/kb_ref/)  
+- Alternative kallisto index creation method: [kb_ref](https://www.kallistobus.tools/kb_usage/kb_ref/)
 
 ## Customize project metadata/config
 
@@ -91,6 +89,13 @@ bash scripts/install.sh
 
    - Location: data/`project_name`/project_config.yaml
 
+## Test data
+
+```bash
+wget -P data/ <gzip_filepath>
+gunzip data/<gzip_filepath>
+```
+
 ## Usage
 
 ```bash
@@ -100,9 +105,3 @@ nextflow run main.nf --project_name <project_name> -with-docker [-resume]
 - `-resume` (optional)
   - Resume the workflow from where it left off in a previous run.
   - It skips completed tasks and avoids re-running steps.
-
-## Others
-
-### GMT Resouces
-
-- [https://data.broadinstitute.org/gsea-msigdb/msigdb/release/7.5.1/](https://data.broadinstitute.org/gsea-msigdb/msigdb/release/7.5.1/)

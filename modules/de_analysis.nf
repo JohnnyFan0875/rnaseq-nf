@@ -3,7 +3,7 @@ process de_analysis {
     tag "$method"
 
     input:
-    path quant_dir
+    val quant_files
     path metadata_file
     val comparisons_json
     val method
@@ -18,15 +18,17 @@ process de_analysis {
 
     script:
     def script_name = method == 'edgeR' ? 'edgeR.R' : 'deseq2.R'
+    def quant_files_str = quant_files.join(',')
 
     """
     mkdir -p DEG_${method}
     Rscript ${script_dir}/${script_name} \\
-        --quant_dir ${quant_dir} \\
+        --quant_files ${quant_files_str} \\
         --metadata ${metadata_file} \\
         --comparisons '${comparisons_json}' \\
         --out_dir DEG_${method} \\
         --ref_dir ${ref_dir} \\
         --script_dir ${script_dir}
     """
+
 }

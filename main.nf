@@ -71,6 +71,8 @@ workflow {
         Channel.value(kallisto_threads)
     )
 
+    quant_results_all = kallisto_out.quant_results.collect()
+
     // multiqc (without post-trimming fastqc)
     all_qc_reports = fastqc_pre_out.fastqc_reports
         .mix(trimmed.html_reports)
@@ -82,7 +84,7 @@ workflow {
 
     // Differential expression analysis
     de_results = de_analysis(
-        file("${result_dir}/kallisto_quant/"),
+        quant_results_all,
         file(metadata_file),
         Channel.value(comparisons_json),
         Channel.value(de_method),
@@ -91,21 +93,21 @@ workflow {
         file("reference/")
     )
 
-    // // Define enrichment analysis inputs
-    // enrichment_inputs = de_results.deg_results
-    //     .map { deg_dir -> tuple(
-    //         deg_dir,
-    //         file(metadata_file),
-    //         comparisons_json,
-    //         result_dir,
-    //         de_method,
-    //         file("scripts/")
-    //     )}
-// 
-    // // GSEA analysis
-    // gsea_results = gsea(enrichment_inputs)
-// 
-    // // ORA analysis
-    // ora_results = ora(enrichment_inputs)
+    // Define enrichment analysis inputs
+    enrichment_inputs = de_results.deg_results
+        .map { deg_dir -> tuple(
+            deg_dir,
+            file(metadata_file),
+            comparisons_json,
+            result_dir,
+            de_method,
+            file("scripts/")
+        )}
+ 
+    // GSEA analysis
+    gsea_results = gsea(enrichment_inputs)
+ 
+    // ORA analysis
+    ora_results = ora(enrichment_inputs)
 
 }

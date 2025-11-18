@@ -9,7 +9,7 @@ library(org.Hs.eg.db)
 library(AnnotationDbi)
 
 option_list <- list(
-  make_option("--quant_dir", type = "character"),
+  make_option("--quant_files", type = "character"),
   make_option("--metadata", type = "character"),
   make_option("--comparisons", type = "character"),
   make_option("--out_dir", type = "character"),
@@ -18,6 +18,7 @@ option_list <- list(
 )
 
 opt <- parse_args(OptionParser(option_list = option_list))
+opt$quant_files <- strsplit(opt$quant_files, ",")[[1]]
 cat('Starting edgeR differential expression analysis\n')
 
 source(file.path(opt$script_dir, "plot_utils_de.R"))
@@ -27,10 +28,17 @@ metadata <- read_csv(opt$metadata)
 rownames(metadata) <- metadata$sample_id
 
 # Construct file paths for abundance files
-files <- setNames(
-  file.path(opt$quant_dir, metadata$sample_id, "abundance.tsv"),
-  metadata$sample_id
-)
+sample_ids_from_files <- sapply(opt$quant_files, function(x) {
+  parts <- strsplit(x, "/")[[1]]
+  parts[length(parts) - 1]  # the second last element is sample_id
+})
+
+# Check if sample IDs match metadata sample IDs
+if (!all(sample_ids_from_files %in% metadata$sample_id)) {
+  stop("Some sample IDs from quant_files do not match metadata$sample_id")
+}
+
+files <- setNames(opt$quant_files, sample_ids_from_files)
 
 # Parse comparisons JSON string
 comparisons <- fromJSON(opt$comparisons)

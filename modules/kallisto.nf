@@ -9,7 +9,7 @@ process kallisto {
     val kallisto_threads
 
     output:
-    tuple val(sample_id), path("${sample_id}/abundance.tsv"), emit: quant_results
+    path("${sample_id}/abundance.tsv"), emit: quant_results
     path("${sample_id}/kallisto_${sample_id}.log"), emit: quant_log
 
     publishDir { "${result_dir}/kallisto_quant/" }, mode: 'copy'
@@ -23,6 +23,5 @@ process kallisto {
         -t $kallisto_threads \
         $read1 \
         $read2 2>&1 | tee ${sample_id}/kallisto_${sample_id}.log
-
     """
 }
