@@ -37,7 +37,7 @@ rna_seq_pipeline/
 │       ├── config/
 │       │   └── project_config.yaml   # Project-specific YAML config
 │       ├── metadata/
-│       │   └── sample_metadata.tsv   # Tab-separated metadata file
+│       │   └── sample_metadata.csv   # Comma-separated metadata file
 │       └── results/
 │           ├── fastqc_pre/           # FASTQC results before trimming
 │           ├── fastp_trim/           # Trimming FASTQ files
@@ -92,7 +92,7 @@ bash scripts/install.sh
 ## Usage
 
 ```bash
-nextflow run main.nf --project_name <project_name> -with-docker [-resume]
+nextflow run main.nf --project_name <project_name> [-resume]
 ```
 
 - `-resume` (optional)
