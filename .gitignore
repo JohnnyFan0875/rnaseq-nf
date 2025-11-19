@@ -2,6 +2,7 @@
 .nextflow.log*
 work/
 old_reference/
-data/
+data/*
+!data/.gitkeep
 reference/*
-!reference/tx2gene.tsv
+!reference/.gitkeep

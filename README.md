@@ -89,13 +89,6 @@ bash scripts/install.sh
 
    - Location: data/`project_name`/project_config.yaml
 
-## Test data
-
-```bash
-wget -P data/ <gzip_filepath>
-gunzip data/<gzip_filepath>
-```
-
 ## Usage
 
 ```bash
@@ -105,3 +98,14 @@ nextflow run main.nf --project_name <project_name> -with-docker [-resume]
 - `-resume` (optional)
   - Resume the workflow from where it left off in a previous run.
   - It skips completed tasks and avoids re-running steps.
+
+## Test data
+
+```bash
+mkdir -p data/test/
+wget -O data/rnaseq-nf-test.tar.gz https://zenodo.org/records/17645472/files/rnaseq-nf-test.tar.gz?download=1
+tar -zxvf data/rnaseq-nf-test.tar.gz
+rm data/rnaseq-nf-test.tar.gz
+
+nextflow run main.nf --project_name test
+```
