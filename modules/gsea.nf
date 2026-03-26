@@ -3,14 +3,7 @@ process gsea {
     tag "GSEA"
 
     input:
-    tuple (
-        path(deg_dir), 
-        path(metadata_file), 
-        val(comparisons_json), 
-        val(result_dir), 
-        val(de_method), 
-        path(script_dir) 
-    )
+    tuple path(deg_dir), path(metadata_file), val(comparisons_json), val(result_dir), val(de_method), path(script_dir)
 
     output:
     path "gsea_results", emit: gsea_out

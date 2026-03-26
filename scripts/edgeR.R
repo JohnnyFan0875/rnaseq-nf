@@ -111,7 +111,7 @@ for (cmp in comparisons) {
   res <- cbind(gene_id = rownames(res), res)
   rownames(res) <- NULL
 
-  write.csv(res, file = file.path(opt$out_dir, paste0(cmp$name, "_edgeR_results.csv")), row.names = FALSE)}
+  write.csv(res, file = file.path(opt$out_dir, paste0(cmp$name, "_edgeR_results.csv")), row.names = FALSE)
 
   # Compute volcano plot
   plot_enhanced_volcano(res, out_file = file.path(opt$out_dir, paste0(cmp$name, "_EnhancedVolcano.png")), title = paste("Volcano Plot:", cmp$name))
@@ -120,5 +120,7 @@ for (cmp in comparisons) {
   baseMean <- rowMeans(cpm(y, log=FALSE))
 
   plot_ma(res, file.path(opt$out_dir, paste0(cmp$name, "_MAplot.png")), baseMean = baseMean)
+
+}
 
 cat('edgeR analysis completed\n')

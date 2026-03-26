@@ -68,7 +68,8 @@ for  (cmp in comparisons) {
                    maxGSSize = 500,
                    pvalueCutoff = 0.05,
                    pAdjustMethod = "BH",
-                   nPerm = 1000,
+                   eps = 0,
+                   nPermSimple = 1000,
                    verbose = FALSE)
 
   fwrite(as.data.frame(gsea_go), file.path(opt$out_dir, paste0(cmp$name, "_gsea_GO_results.csv")))
@@ -80,7 +81,8 @@ for  (cmp in comparisons) {
                        maxGSSize = 500,
                        pvalueCutoff = 0.05,
                        pAdjustMethod = "BH",
-                       nPerm = 1000,
+                       eps = 0,
+                       nPermSimple = 1000,
                        verbose = FALSE)
 
   fwrite(as.data.frame(gsea_kegg), file.path(opt$out_dir, paste0(cmp$name, "_gsea_KEGG_results.csv")))
@@ -92,7 +94,8 @@ for  (cmp in comparisons) {
                               maxGSSize = 500,
                               pvalueCutoff = 0.05,
                               pAdjustMethod = "BH",
-                              nPerm = 1000,
+                              eps = 0,
+                              nPermSimple = 1000,
                               verbose = FALSE)
 
   fwrite(as.data.frame(gsea_reactome), file.path(opt$out_dir, paste0(cmp$name, "_gsea_REACTOME_results.csv")))  
@@ -103,7 +106,8 @@ for  (cmp in comparisons) {
                    maxGSSize = 500,
                    pvalueCutoff = 0.05,
                    pAdjustMethod = "BH",
-                   nPerm = 1000,
+                   eps = 0,
+                   nPermSimple = 1000,
                    verbose = FALSE)
 
   # Save results

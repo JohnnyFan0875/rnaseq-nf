@@ -65,8 +65,8 @@ workflow {
     )
 
     // Kallisto quantification
-    kallisto_out = kallisto(trimmed.trimmed_reads, 
-        file(kallisto_index), 
+    kallisto_out = kallisto(trimmed.trimmed_reads,
+        file(kallisto_index),
         Channel.value(result_dir),
         Channel.value(kallisto_threads)
     )
@@ -82,9 +82,14 @@ workflow {
 
     multiqc(all_qc_reports, Channel.value(result_dir))
 
+    // Separate sample IDs and abundance files into two collected channels
+    quant_sample_ids   = kallisto_out.quant_results.map { id, _tsv -> id }.collect()
+    quant_abundance = kallisto_out.quant_results.map { _id, dir -> dir }.collect()
+
     // Differential expression analysis
     de_results = de_analysis(
-        quant_results_all,
+        quant_sample_ids,
+        quant_abundance,
         file(metadata_file),
         Channel.value(comparisons_json),
         Channel.value(de_method),

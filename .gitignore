@@ -6,3 +6,4 @@ data/*
 !data/.gitkeep
 reference/*
 !reference/.gitkeep
+repomix-output.xml

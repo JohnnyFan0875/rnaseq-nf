@@ -49,7 +49,7 @@ for (cmp in comparisons) {
 
   sig_genes <- deg_data %>%
     filter(!is.na(PValue), !is.na(gene_symbol)) %>%
-    filter(PValue < 0.05) %>%
+    filter(FDR < 0.05 | PValue < 0.05) %>%
     pull(gene_symbol) %>%
     unique()
 
