@@ -82,7 +82,7 @@ bash scripts/install.sh
 3. Modify sample_metadata.csv
 
    - Location: data/`project_name`/sample_metadata.csv
-   - Format: sample_id,fastq_R1,fastq_R2,group_name,replicate
+   - Format: sample_id,fastq1,fastq2,group_name,replicate
    - Example: sample_control,sample_control_R1.fastq.gz,sample_control_R2.fastq.gz,control,1
 
 4. Modify project_config.yaml
