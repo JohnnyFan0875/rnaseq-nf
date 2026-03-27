@@ -16,7 +16,6 @@ process de_analysis {
 
     script:
     def script_name = method == 'edgeR' ? 'edgeR.R' : 'deseq2.R'
-    def ids = sample_ids instanceof List ? sample_ids : [sample_ids]
 
     """
     mkdir -p DEG_${method}

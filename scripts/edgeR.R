@@ -49,6 +49,7 @@ tx2gene <- read_tsv(file.path(opt$ref_dir, "tx2gene.tsv"), col_names = c("transc
 
 # Import transcript-level estimates
 txi <- tximport(files, type = "kallisto", tx2gene = tx2gene)
+metadata <- metadata[colnames(txi$counts), ]
 
 # Extract gene IDs from rownames
 gene_ids <- rownames(txi$counts)
