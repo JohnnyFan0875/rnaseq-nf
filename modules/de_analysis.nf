@@ -8,14 +8,11 @@ process de_analysis {
     path metadata_file
     val  comparisons_json
     val  method
-    val  result_dir
     path script_dir
     path ref_dir
 
     output:
     path "DEG_${method}", emit: deg_results
-
-    publishDir { "${result_dir}/de_analysis/" }, mode: 'copy'
 
     script:
     def script_name = method == 'edgeR' ? 'edgeR.R' : 'deseq2.R'
@@ -23,7 +20,13 @@ process de_analysis {
 
     """
     mkdir -p DEG_${method}
-    QUANT_FILES=\$(for id in ${ids.join(' ')}; do echo "\$(pwd)/\${id}/abundance.tsv"; done | paste -sd ',')
+
+    QUANT_FILES=\$(find -L . -name "abundance.tsv" | sort | paste -sd ',')
+
+    if [[ -z "\$QUANT_FILES" ]]; then
+        echo "ERROR: No abundance.tsv files found in staged quant directories." >&2
+        exit 1
+    fi
 
     Rscript ${script_dir}/${script_name} \\
         --quant_files \$QUANT_FILES \\

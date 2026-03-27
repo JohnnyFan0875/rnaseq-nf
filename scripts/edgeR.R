@@ -81,7 +81,7 @@ logCPM_all <- cpm(y_all, log=TRUE)
 # Generate exploratory plots
 plot_mds(y_all, group_all, file.path(opt$out_dir, "MDS_plot.png"))
 plot_pca(logCPM_all, group_all, file.path(opt$out_dir, "PCA_plot.png"))
-plot_heatmap(logCPM_all, group_all, file.path(opt$out_dir, "Heatmap_top500_var_genes.png"))
+plot_heatmap(logCPM_all, group_all, file.path(opt$out_dir, "Heatmap_top500_var_genes.png"), top_n = 500)
 
 # Run edgeR
 for (cmp in comparisons) {

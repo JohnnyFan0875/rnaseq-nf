@@ -2,117 +2,140 @@ nextflow.enable.dsl=2
 
 import groovy.json.JsonOutput
 
-// Include modules
-include { fastqc as fastqc_pre } from './modules/fastqc.nf'
+// ── Include modules ───────────────────────────────────────────────────────────
+include { fastqc as fastqc_pre  } from './modules/fastqc.nf'
 include { fastqc as fastqc_post } from './modules/fastqc.nf'
-include { fastp }  from './modules/fastp.nf'
-include { multiqc } from './modules/multiqc.nf'
-include { kallisto } from './modules/kallisto.nf'
-include { de_analysis } from './modules/de_analysis.nf'
-include { gsea } from './modules/gsea.nf'
-include { ora } from './modules/ora.nf'
+include { fastp        }          from './modules/fastp.nf'
+include { multiqc      }          from './modules/multiqc.nf'
+include { kallisto     }          from './modules/kallisto.nf'
+include { de_analysis  }          from './modules/de_analysis.nf'
+include { gsea         }          from './modules/gsea.nf'
+include { ora          }          from './modules/ora.nf'
 
-// Define parameter
+// ── Parameter validation ──────────────────────────────────────────────────────
 if (!params.project_name) {
-    error "Please provide a project name using --project_name"
+    error """
+    =========================================
+    ERROR: --project_name is required.
+
+    Example:
+      nextflow run main.nf \\
+        -profile docker \\
+        -params-file params/my_project.yaml
+    =========================================
+    """
 }
 
-def parseYamlFile(path) {
-    def yamlText = file(path).text
-    def slurper = new groovy.yaml.YamlSlurper()
-    return slurper.parseText(yamlText)
+if (!params.outdir) {
+    error """
+    =========================================
+    ERROR: --outdir is required.
+
+    Set it in your params YAML:
+      outdir: results/my_project
+    or pass it on the command line:
+      --outdir results/my_project
+    =========================================
+    """
 }
 
-def project_dir = "./data/${params.project_name}"
-def config_path = "${project_dir}/config/project_config.yaml"
-def project_cfg = parseYamlFile(config_path)
-def metadata_file = project_cfg.metadata_file
-def kallisto_index = project_cfg.kallisto_index
-def kallisto_threads = project_cfg.kallisto_threads ?: 4
-def de_method = project_cfg.de_method
-def comparisons = project_cfg.comparisons
-def result_dir = "${project_dir}/results"
-def comparisons_json = JsonOutput.toJson(comparisons)
+// ── Resolve metadata_file default ────────────────────────────────────────────
+def resolved_metadata = params.metadata_file
+    ?: "./data/${params.project_name}/metadata/sample_metadata.csv"
 
-// main workflow
+// ── Main workflow ─────────────────────────────────────────────────────────────
 workflow {
 
+    if (!params.comparisons) {
+        error "params.comparisons is required. Define it in your -params-file YAML."
+    }
+
+    def comparisons_json = JsonOutput.toJson(params.comparisons)
+
+    // Build sample channel from metadata CSV
     samples = Channel
-        .fromPath("${metadata_file}")
+        .fromPath(resolved_metadata, checkIfExists: true)
         .splitCsv(header: true, sep: ',')
-        .map { row -> 
-            tuple(row.sample_id, 
-                  file("${project_dir}/raw/${row.fastq1}"), 
-                  file("${project_dir}/raw/${row.fastq2}")
+        .map { row ->
+            tuple(
+                row.sample_id,
+                file("./data/${params.project_name}/raw/${row.fastq1}", checkIfExists: true),
+                file("./data/${params.project_name}/raw/${row.fastq2}", checkIfExists: true)
             )
         }
 
-    // Pre-trim QC
-    fastqc_pre_out = fastqc_pre(samples,
-        Channel.value("pre"),
-        Channel.value(result_dir)
+    // ── Pre-trim QC ───────────────────────────────────────────────────────────
+    fastqc_pre_out = fastqc_pre(
+        samples,
+        Channel.value("pre")
     )
 
-    // Fastp trimming
-    trimmed = fastp(samples,
-        Channel.value(result_dir)
+    // ── Adapter trimming ──────────────────────────────────────────────────────
+    if (!params.skip_trimming) {
+        trimmed = fastp(samples)
+
+        fastqc_post_out = fastqc_post(
+            trimmed.trimmed_reads,
+            Channel.value("post")
+        )
+
+        reads_for_quant    = trimmed.trimmed_reads
+        fastp_qc_logs      = trimmed.html_reports.mix(trimmed.json_reports)
+        post_fastqc_reports = fastqc_post_out.fastqc_reports
+
+    } else {
+        fastqc_post_out    = Channel.empty()
+        reads_for_quant    = samples
+        fastp_qc_logs      = Channel.empty()
+        post_fastqc_reports = Channel.empty()
+    }
+
+    // ── Kallisto quantification ───────────────────────────────────────────────
+    kallisto_out = kallisto(
+        reads_for_quant,
+        file(params.kallisto_index, checkIfExists: true)
     )
 
-    // Post-trim QC
-    fastqc_post_out = fastqc_post(trimmed.trimmed_reads,
-        Channel.value("post"),
-        Channel.value(result_dir)
-    )
-
-    // Kallisto quantification
-    kallisto_out = kallisto(trimmed.trimmed_reads,
-        file(kallisto_index),
-        Channel.value(result_dir),
-        Channel.value(kallisto_threads)
-    )
-
-    quant_results_all = kallisto_out.quant_results.collect()
-
-    // multiqc (without post-trimming fastqc)
+    // ── MultiQC ───────────────────────────────────────────────────────────────
+    // FIX: post_fastqc_reports now mixed in — was previously omitted, causing
+    // post-trim FastQC data to be absent from the MultiQC report.
     all_qc_reports = fastqc_pre_out.fastqc_reports
-        .mix(trimmed.html_reports)
-        .mix(trimmed.json_reports)
+        .mix(post_fastqc_reports)
+        .mix(fastp_qc_logs)
         .mix(kallisto_out.quant_log)
         .collect()
 
-    multiqc(all_qc_reports, Channel.value(result_dir))
+    multiqc(all_qc_reports)
 
-    // Separate sample IDs and abundance files into two collected channels
-    quant_sample_ids   = kallisto_out.quant_results.map { id, _tsv -> id }.collect()
-    quant_abundance = kallisto_out.quant_results.map { _id, dir -> dir }.collect()
+    // ── Differential expression ───────────────────────────────────────────────
+    quant_sample_ids = kallisto_out.quant_results.map { id, _dir -> id  }.collect()
+    quant_abundance  = kallisto_out.quant_results.map { _id, dir -> dir }.collect()
 
-    // Differential expression analysis
     de_results = de_analysis(
         quant_sample_ids,
         quant_abundance,
-        file(metadata_file),
+        file(resolved_metadata),
         Channel.value(comparisons_json),
-        Channel.value(de_method),
-        Channel.value(result_dir),
-        file("scripts/"),
-        file("reference/")
+        Channel.value(params.de_method),
+        file("${projectDir}/scripts/"),
+        file(params.ref_dir)
     )
 
-    // Define enrichment analysis inputs
-    enrichment_inputs = de_results.deg_results
-        .map { deg_dir -> tuple(
-            deg_dir,
-            file(metadata_file),
-            comparisons_json,
-            result_dir,
-            de_method,
-            file("scripts/")
-        )}
- 
-    // GSEA analysis
-    gsea_results = gsea(enrichment_inputs)
- 
-    // ORA analysis
-    ora_results = ora(enrichment_inputs)
+    // ── Enrichment analysis ───────────────────────────────────────────────────
+    if (!params.skip_enrichment) {
 
+        // FIX: Removed file(resolved_metadata) from enrichment_inputs tuple —
+        // gsea.nf and ora.nf no longer declare metadata_file in their input,
+        // since it was staged but never consumed by the R scripts.
+        enrichment_inputs = de_results.deg_results
+            .map { deg_dir -> tuple(
+                deg_dir,
+                comparisons_json,
+                params.de_method,
+                file("${projectDir}/scripts/")
+            )}
+
+        gsea_results = gsea(enrichment_inputs)
+        ora_results  = ora(enrichment_inputs)
+    }
 }

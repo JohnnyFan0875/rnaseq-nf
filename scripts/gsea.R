@@ -26,9 +26,7 @@ cat('Starting gsea analysis\n')
 
 source(file.path(opt$script_dir, "plot_utils_enrichment.R"))
 
-# Read metadata
-metadata <- read_csv(opt$metadata)
-rownames(metadata) <- metadata$sample_id
+  # NOTE: --metadata param accepted but not consumed in current analysis logic
 
 # Parse comparisons JSON string
 comparisons <- fromJSON(opt$comparisons) %>% split(seq(nrow(.)))
@@ -101,17 +99,29 @@ for  (cmp in comparisons) {
   fwrite(as.data.frame(gsea_reactome), file.path(opt$out_dir, paste0(cmp$name, "_gsea_REACTOME_results.csv")))  
 
   # Run GSEA for Disease Ontology (DO)
-  gsea_do <- gseDO(geneList = ranked_gene_list,
-                   minGSSize = 10,
-                   maxGSSize = 500,
-                   pvalueCutoff = 0.05,
-                   pAdjustMethod = "BH",
-                   eps = 0,
-                   nPermSimple = 1000,
-                   verbose = FALSE)
+  # FIX: Wrapped in tryCatch — gseDO requires HDO.sqlite which may fail to
+  # download inside a container (broken HOME path or no network access).
+  # On failure, produce a .fail file consistent with the plot tryCatch pattern.
+  do_result_output <- file.path(opt$out_dir, paste0(cmp$name, "_gsea_DO_results.csv"))
+  gsea_do <- tryCatch({
+    gseDO(geneList = ranked_gene_list,
+          minGSSize = 10,
+          maxGSSize = 500,
+          pvalueCutoff = 0.05,
+          pAdjustMethod = "BH",
+          eps = 0,
+          nPermSimple = 1000,
+          verbose = FALSE)
+  }, error = function(e) {
+    fail_file <- sub("\\.csv$", ".fail", do_result_output)
+    file.create(fail_file)
+    message("Failed to run gseDO for ", cmp$name, ": ", e$message)
+    NULL
+  })
 
-  # Save results
-  fwrite(as.data.frame(gsea_do), file.path(opt$out_dir, paste0(cmp$name, "_gsea_DO_results.csv")))
+  if (!is.null(gsea_do)) {
+    fwrite(as.data.frame(gsea_do), do_result_output)
+  }
 
   # GSEA plots
   gsea_list <- list(GO = gsea_go,
@@ -122,6 +132,17 @@ for  (cmp in comparisons) {
   for (db_type in names(gsea_list)) {
 
     gsea_res <- gsea_list[[db_type]]
+
+    if (is.null(gsea_res)) {
+      message("Skipping plots for ", db_type, " (analysis failed for ", cmp$name, ")")
+      
+      for (plot_type in c("dotplot", "barplot", "cnetplot")) {
+        fail_file <- file.path(opt$out_dir, paste0(cmp$name, "_gsea_", db_type, "_", plot_type, ".fail"))
+        file.create(fail_file)
+      }
+      
+      next
+    }
     
     # GSEA dotplot
     dot_output <- file.path(opt$out_dir, paste0(cmp$name, "_gsea_", db_type, "_dotplot.png"))

@@ -26,9 +26,7 @@ cat('Starting ora analysis\n')
 
 source(file.path(opt$script_dir, "plot_utils_enrichment.R"))
 
-# Read metadata
-metadata <- read_csv(opt$metadata)
-rownames(metadata) <- metadata$sample_id
+  # NOTE: --metadata param accepted but not consumed in current analysis logic
 
 # Parse comparisons JSON string
 comparisons <- fromJSON(opt$comparisons) %>% split(seq(nrow(.)))
@@ -41,7 +39,7 @@ convert_to_entrez <- function(genes) {
 
 set.seed(123)
 
-# Run GSEA
+# Run ORA
 for (cmp in comparisons) {
   
   deg_file <- file.path(opt$deg_dir, paste0(cmp$name, "_", opt$de_method, "_results.csv"))
@@ -100,18 +98,31 @@ for (cmp in comparisons) {
   fwrite(as.data.frame(ora_reactome), file.path(opt$out_dir, paste0(cmp$name, "_ora_REACTOME_results.csv")))
   
   # Disease Ontology ORA
-  ora_do <- enrichDO(gene = entrez_genes,
-                     universe = universe_genes,
-                     ont = "HDO",
-                     pAdjustMethod = "BH",
-                     pvalueCutoff = 0.05,
-                     qvalueCutoff = 0.2,
-                     minGSSize = 10,
-                     maxGSSize = 500,
-                     readable = TRUE)
-  
-  fwrite(as.data.frame(ora_do), file.path(opt$out_dir, paste0(cmp$name, "_ora_DO_results.csv")))
-  
+  # FIX: Wrapped in tryCatch — enrichDO requires HDO.sqlite which may fail to
+  # download inside a container (broken HOME path or no network access).
+  # On failure, produce a .fail file consistent with the plot tryCatch pattern.
+  do_result_output <- file.path(opt$out_dir, paste0(cmp$name, "_ora_DO_results.csv"))
+  ora_do <- tryCatch({
+    enrichDO(gene = entrez_genes,
+             universe = universe_genes,
+             ont = "HDO",
+             pAdjustMethod = "BH",
+             pvalueCutoff = 0.05,
+             qvalueCutoff = 0.2,
+             minGSSize = 10,
+             maxGSSize = 500,
+             readable = TRUE)
+  }, error = function(e) {
+    fail_file <- sub("\\.csv$", ".fail", do_result_output)
+    file.create(fail_file)
+    message("Failed to run enrichDO for ", cmp$name, ": ", e$message)
+    NULL
+  })
+
+  if (!is.null(ora_do)) {
+    fwrite(as.data.frame(ora_do), do_result_output)
+  }
+
   # ORA plots
   ora_list <- list(GO = ora_go,
                    KEGG = ora_kegg,
@@ -121,6 +132,17 @@ for (cmp in comparisons) {
   for (db_type in names(ora_list)) {
 
     ora_res <- ora_list[[db_type]]
+
+    if (is.null(ora_res)) {
+      message("Skipping plots for ", db_type, " (analysis failed for ", cmp$name, ")")
+      
+      for (plot_type in c("dotplot", "barplot", "cnetplot")) {
+        fail_file <- file.path(opt$out_dir, paste0(cmp$name, "_ora_", db_type, "_", plot_type, ".fail"))
+        file.create(fail_file)
+      }
+      
+      next
+    }
     
     # ORA dotplot
     dot_output <- file.path(opt$out_dir, paste0(cmp$name, "_ora_", db_type, "_dotplot.png"))
