@@ -7,3 +7,4 @@ data/*
 reference/*
 !reference/.gitkeep
 repomix-output.xml
+.codex

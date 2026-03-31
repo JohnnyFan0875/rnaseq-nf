@@ -2,53 +2,70 @@
 
 ## Introduction
 
-`rnaseq-nf` contains a modular, containerized (Docker) RNA-Seq analysis pipeline implemented using `Nextflow`. It is designed to process bulk RNA-Seq data from raw FASTQ files through quality control, quantification, and downstream analysis including differential expression (DE), gene set enrichment analysis (GSEA), and over-representation analysis (ORA).
+`rnaseq-nf` is a modular, containerized RNA-seq pipeline built with Nextflow DSL2.
+It processes paired-end FASTQ files through QC, trimming, quantification,
+differential expression, and optional enrichment analysis.
 
 ## Pipeline Summary
 
-Input: Paired-end FASTQ files + project metadata/config files  
-Output: Quality reports, expression quantification, DEG tables, GSEA/ORA results
+Input:
 
-Main Steps:
+- Paired-end FASTQ files
+- Sample metadata CSV
+- Params YAML (`-params-file`)
 
-1. Quality control (FastQC)
-2. Adapter and quality trimming (Fastp)
-3. Quantification (Kallisto)
-4. Post-trimming QC summary (MultiQC)
-5. Differential expression analysis (edgeR) # DESeq2 under contruction
-6. GSEA (Gene Set Enrichment Analysis)
-7. ORA (Over-Representation Analysis)
+Output:
 
-## Directory Structure
+- FastQC / fastp / MultiQC reports
+- Kallisto quantification
+- Differential expression results
+- Optional GSEA / ORA results
+
+Main steps:
+
+1. FastQC (pre-trim)
+2. fastp trimming
+3. FastQC (post-trim)
+4. Kallisto quantification
+5. MultiQC aggregation
+6. Differential expression (edgeR)
+7. Optional GSEA / ORA
+
+## Project Structure
 
 ```bash
 rna_seq_pipeline/
-├── main.nf                           # Main Nextflow pipeline script
-├── nextflow.config                   # System-wide Nextflow configuration
-├── modules/                          # Modular Nextflow process scripts
-├── images/                           # Dockerfiles
-├── scripts/                          # Bash and R scripts
-├── reference/                        # GTF, reference fasta, kallisto index files
+├── main.nf
+├── nextflow.config
+├── conf/
+│   ├── base.config
+│   ├── modules.config
+│   ├── slurm.config
+│   └── test.config
+├── modules/
+├── scripts/
+├── params/
+│   ├── test.yaml
+│   └── *.yaml
+├── template/
+│   ├── params_template.yaml
+│   └── metadata_template.csv
 ├── data/
-│   └── test/
+│   └── <project_name>/
 │       ├── raw/
-│       │   ├── sample_R1.fastq.gz    # Raw FASTQ files
-│       │   ├── sample_R2.fastq.gz    # Raw FASTQ files
-│       ├── config/
-│       │   └── project_config.yaml   # Project-specific YAML config
 │       ├── metadata/
-│       │   └── sample_metadata.csv   # Comma-separated metadata file
+│       │   └── sample_metadata.csv
 │       └── results/
-│           ├── fastqc_pre/           # FASTQC results before trimming
-│           ├── fastp_trim/           # Trimming FASTQ files
-│           ├── fastqc_post/          # FASTQC results after trimming
-│           ├── multiqc/              # Aggregated QC reports
-│           ├── kallisto_quant/       # Transcript quantification
-│           ├── de_analysis/          # Differential expression analysis
-│           ├── gsea_results/         # GSEA enrichment results
-│           └── ora_results/          # Over-representation analysis results
-└── README.md
+└── reference/
 ```
+
+## Requirements
+
+- Nextflow `>= 24.10.0`
+- One execution environment:
+  - Docker (recommended), or
+  - Singularity, or
+  - Local binaries installed (`fastqc`, `fastp`, `kallisto`, `multiqc`, `Rscript`)
 
 ## Install
 
@@ -56,56 +73,114 @@ rna_seq_pipeline/
 bash scripts/install.sh
 ```
 
-- Detailed kallisto index creation can be referred to [kallisto_index.sh](./scripts/kallisto_index.sh)
-- Alternative kallisto index creation method: [kb_ref](https://www.kallistobus.tools/kb_usage/kb_ref/)
+Reference index helper:
 
-## Customize project metadata/config
+- [scripts/kallisto_index.sh](./scripts/kallisto_index.sh)
 
-1. Copy project config/metadata files
+## Prepare Input Data
 
-   ```bash
-    project_name="project_name" # replace your desired name
-   ```
+1. Create project folders and copy templates
 
-   ```bash
-    mkdir -p data/$project_name/{config,metadata,raw}
-    cp template/project_config.yaml data/$project_name/project_config.yaml
-    cp template/sample_metadata.tsv data/$project_name/sample_metadata.tsv
-    unset project_name
-   ```
+```bash
+project_name="my_project"
+mkdir -p data/${project_name}/{raw,metadata,results}
+cp template/params_template.yaml params/${project_name}.yaml
+cp template/metadata_template.csv data/${project_name}/metadata/sample_metadata.csv
+unset project_name
+```
 
-2. Prepare raw data
+2. Put FASTQ files in:
 
-   - Location: data/`project_name`/raw
-   - Require **pair-end** fastq.gz files
+- `data/<project_name>/raw/`
 
-3. Modify sample_metadata.csv
+3. Edit metadata CSV:
 
-   - Location: data/`project_name`/sample_metadata.csv
-   - Format: sample_id,fastq1,fastq2,group_name,replicate
-   - Example: sample_control,sample_control_R1.fastq.gz,sample_control_R2.fastq.gz,control,1
+- `data/<project_name>/metadata/sample_metadata.csv`
 
-4. Modify project_config.yaml
+Metadata columns (required):
 
-   - Location: data/`project_name`/project_config.yaml
+- `sample_id`
+- `fastq1`
+- `fastq2`
+- `group`
+
+Example row:
+
+```csv
+sample_control_1,sample_control_1_R1.fastq.gz,sample_control_1_R2.fastq.gz,control
+```
+
+## Configure Parameters
+
+Edit your copied params file:
+
+- `params/<project_name>.yaml`
+
+Minimum required params:
+
+- `project_name`
+- `outdir`
+- `comparisons`
+
+Important notes:
+
+- If `metadata_file` is omitted, default is:
+  - `data/<project_name>/metadata/sample_metadata.csv`
+- `de_method` currently supports `edgeR` in this repo.
 
 ## Usage
 
-```bash
-nextflow run main.nf --project_name <project_name> [-resume]
-```
-
-- `-resume` (optional)
-  - Resume the workflow from where it left off in a previous run.
-  - It skips completed tasks and avoids re-running steps.
-
-## Test data
+### Standard run (Docker)
 
 ```bash
-mkdir -p data/test/
-wget -O data/rnaseq-nf-test.tar.gz https://zenodo.org/records/17645472/files/rnaseq-nf-test.tar.gz?download=1
-tar -zxvf data/rnaseq-nf-test.tar.gz
-rm data/rnaseq-nf-test.tar.gz
-
-nextflow run main.nf --project_name test
+nextflow run main.nf -profile docker -params-file params/<project_name>.yaml
 ```
+
+### Resume run
+
+```bash
+nextflow run main.nf -profile docker -params-file params/<project_name>.yaml -resume
+```
+
+### Local run (no container)
+
+```bash
+nextflow run main.nf -profile local -params-file params/<project_name>.yaml
+```
+
+## Test Dataset
+
+This repo already includes test data under `data/test` and a test params file at
+`params/test.yaml`.
+
+Run test:
+
+```bash
+nextflow run main.nf -profile docker,test -params-file params/test.yaml
+```
+
+Notes:
+
+- `conf/test.config` is intentionally minimal and mainly reserved for optional
+  profile-level overrides (resource / executor / container behavior).
+- Dataset paths and biological params should stay in `params/test.yaml`.
+
+## Profiles
+
+- `docker`: run with Docker containers
+- `singularity`: run with Singularity
+- `local`: run on host without container
+- `slurm`: adds HPC SLURM executor settings (typically with `-profile singularity,slurm`)
+- `test`: optional profile-specific overrides for testing
+
+## Outputs
+
+All outputs are written under `outdir` defined in your params file, typically:
+
+- `fastqc_pre/`
+- `fastp_trim/`
+- `fastqc_post/`
+- `kallisto_quant/`
+- `multiqc/`
+- `de_analysis/`
+- `enrichment_analysis/` (when enrichment is enabled)

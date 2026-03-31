@@ -1,5 +1,5 @@
 # ──────────────────────────────────────────────────────────────────────────────
-# params/<project_name>.yaml  —  Nextflow params-file (replaces project_config.yaml)
+# params/<project_name>.yaml  —  Nextflow params-file template
 #
 # Usage:
 #   nextflow run main.nf -profile docker -params-file params/my_project.yaml

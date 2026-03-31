@@ -6,8 +6,8 @@
 # ──────────────────────────────────────────────────────────────────────────────
 
 # === Required ===
-project_name: GSE52778_subsample_phase2                              # Used to locate data/my_project/
-outdir: data/GSE52778_subsample_phase2/results                          # All pipeline outputs go here
+project_name: test                              # Used to locate data/my_project/
+outdir: data/test/results                          # All pipeline outputs go here
 
 # === Input ===
 # metadata_file is optional; defaults to data/<project_name>/metadata/sample_metadata.csv
