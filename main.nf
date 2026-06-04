@@ -3,15 +3,13 @@ nextflow.enable.dsl=2
 import groovy.json.JsonOutput
 
 // ── Include modules ───────────────────────────────────────────────────────────
-include { fastqc as fastqc_pre  } from './modules/fastqc.nf'
-include { fastqc as fastqc_post } from './modules/fastqc.nf'
-include { fastp        }          from './modules/fastp.nf'
-include { multiqc      }          from './modules/multiqc.nf'
-include { kallisto     }          from './modules/kallisto.nf'
-include { prepare_reference }     from './modules/prepare_reference.nf'
-include { de_analysis  }          from './modules/de_analysis.nf'
-include { gsea         }          from './modules/gsea.nf'
-include { ora          }          from './modules/ora.nf'
+include { FASTQ_TRIM_FASTP_FASTQC as fastq_preprocess } from './subworkflows/nf-core/fastq_trim_fastp_fastqc/main'
+include { MULTIQC                 as multiqc          } from './modules/nf-core/multiqc/main'
+include { KALLISTO_QUANT          as kallisto         } from './modules/nf-core/kallisto/quant/main'
+include { PREPARE_REFERENCE       as prepare_reference } from './subworkflows/local/prepare_reference/main'
+include { de_analysis                                 } from './modules/de_analysis.nf'
+include { gsea                                        } from './modules/gsea.nf'
+include { ora                                         } from './modules/ora.nf'
 
 // ── Parameter validation ──────────────────────────────────────────────────────
 if (!params.project_name) {
@@ -77,15 +75,15 @@ workflow {
     def comparisons_json = JsonOutput.toJson(params.comparisons)
 
     prepared_reference = prepare_reference(
-        Channel.value(resolved_ref_dir),
-        Channel.value(resolved_gtf),
-        Channel.value(resolved_genome_fasta),
-        Channel.value(resolved_transcripts_fasta),
-        Channel.value(resolved_kallisto_index),
-        Channel.value(resolved_tx2gene),
-        Channel.value(resolved_gtf_url),
-        Channel.value(resolved_genome_fasta_url),
-        Channel.value(params.reference_auto_download),
+        resolved_ref_dir,
+        resolved_gtf,
+        resolved_genome_fasta,
+        resolved_transcripts_fasta,
+        resolved_kallisto_index,
+        resolved_tx2gene,
+        resolved_gtf_url,
+        resolved_genome_fasta_url,
+        params.reference_auto_download,
         file("${projectDir}/scripts/")
     )
 
@@ -94,59 +92,65 @@ workflow {
         .fromPath(resolved_metadata, checkIfExists: true)
         .splitCsv(header: true, sep: ',')
         .map { row ->
+            def meta = [
+                id        : row.sample_id,
+                single_end: false
+            ]
+
+            if (row.containsKey('strandedness') && row.strandedness) {
+                meta.strandedness = row.strandedness
+            }
+
             tuple(
-                row.sample_id,
-                file(row.fastq1, checkIfExists: true),
-                file(row.fastq2, checkIfExists: true)
+                meta,
+                [
+                    file(row.fastq1, checkIfExists: true),
+                    file(row.fastq2, checkIfExists: true)
+                ]
             )
         }
 
-    // ── Pre-trim QC ───────────────────────────────────────────────────────────
-    fastqc_pre_out = fastqc_pre(
-        samples,
-        Channel.value("pre")
+    // ── Read QC and trimming ──────────────────────────────────────────────────
+    qc_trimmed_reads = fastq_preprocess(
+        samples.map { meta, reads -> tuple(meta, reads, []) },
+        false,
+        false,
+        false,
+        params.skip_trimming,
+        false
     )
 
-    // ── Adapter trimming ──────────────────────────────────────────────────────
-    if (!params.skip_trimming) {
-        trimmed = fastp(samples)
-
-        fastqc_post_out = fastqc_post(
-            trimmed.trimmed_reads,
-            Channel.value("post")
-        )
-
-        reads_for_quant    = trimmed.trimmed_reads
-        fastp_qc_logs      = trimmed.html_reports.mix(trimmed.json_reports)
-        post_fastqc_reports = fastqc_post_out.fastqc_reports
-
-    } else {
-        fastqc_post_out    = Channel.empty()
-        reads_for_quant    = samples
-        fastp_qc_logs      = Channel.empty()
-        post_fastqc_reports = Channel.empty()
-    }
+    reads_for_quant = qc_trimmed_reads.reads
 
     // ── Kallisto quantification ───────────────────────────────────────────────
     kallisto_out = kallisto(
         reads_for_quant,
-        prepared_reference.kallisto_index
+        prepared_reference.kallisto_index.map { idx -> tuple([id: 'reference'], idx) },
+        [],
+        [],
+        [],
+        []
     )
 
     // ── MultiQC ───────────────────────────────────────────────────────────────
-    // FIX: post_fastqc_reports now mixed in — was previously omitted, causing
-    // post-trim FastQC data to be absent from the MultiQC report.
-    all_qc_reports = fastqc_pre_out.fastqc_reports
-        .mix(post_fastqc_reports)
-        .mix(fastp_qc_logs)
-        .mix(kallisto_out.quant_log)
+    all_qc_reports = qc_trimmed_reads.fastqc_raw_zip
+        .map { _meta, report -> report }
+        .mix(qc_trimmed_reads.fastqc_trim_zip.map { _meta, report -> report })
+        .mix(qc_trimmed_reads.trim_json.map { _meta, report -> report })
+        .mix(qc_trimmed_reads.trim_html.map { _meta, report -> report })
+        .mix(qc_trimmed_reads.trim_log.map { _meta, report -> report })
+        .mix(kallisto_out.log.map { _meta, log_file -> log_file })
         .collect()
 
-    multiqc(all_qc_reports)
+    multiqc(
+        all_qc_reports.map { reports ->
+            tuple([id: 'multiqc'], reports, [], [], [], [])
+        }
+    )
 
     // ── Differential expression ───────────────────────────────────────────────
-    quant_sample_ids = kallisto_out.quant_results.map { id, _dir -> id  }.collect()
-    quant_abundance  = kallisto_out.quant_results.map { _id, dir -> dir }.collect()
+    quant_sample_ids = kallisto_out.results.map { meta, _dir -> meta.id }.collect()
+    quant_abundance  = kallisto_out.results.map { _meta, dir -> dir }.collect()
 
     de_results = de_analysis(
         quant_sample_ids,

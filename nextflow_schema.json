@@ -1,0 +1,123 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.org/rna-seq-pipeline/nextflow_schema.json",
+  "title": "RNA-seq Pipeline Parameters",
+  "description": "Schema for the RNA-seq Nextflow pipeline parameters.",
+  "type": "object",
+  "definitions": {
+    "comparison": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "control",
+        "non_control"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Comparison label used in output files."
+        },
+        "control": {
+          "type": "string",
+          "description": "Control group name from the metadata group column."
+        },
+        "non_control": {
+          "type": "string",
+          "description": "Non-control group name from the metadata group column."
+        }
+      }
+    }
+  },
+  "properties": {
+    "project_name": {
+      "type": "string",
+      "description": "Project name used for run metadata and reporting."
+    },
+    "outdir": {
+      "type": "string",
+      "description": "Pipeline output directory."
+    },
+    "metadata_file": {
+      "type": "string",
+      "description": "CSV file describing samples and FASTQ paths."
+    },
+    "comparisons": {
+      "type": "array",
+      "description": "Differential expression comparisons to evaluate.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/definitions/comparison"
+      }
+    },
+    "ref_dir": {
+      "type": "string",
+      "description": "Directory containing reference assets."
+    },
+    "reference_auto_download": {
+      "type": "boolean",
+      "description": "Automatically download and build missing reference files.",
+      "default": true
+    },
+    "gtf_url": {
+      "type": "string",
+      "description": "Source URL for the reference GTF file."
+    },
+    "genome_fasta_url": {
+      "type": "string",
+      "description": "Source URL for the reference genome FASTA file."
+    },
+    "kallisto_threads": {
+      "type": "integer",
+      "description": "Number of threads for kallisto quantification and indexing.",
+      "minimum": 1,
+      "default": 4
+    },
+    "de_method": {
+      "type": "string",
+      "description": "Differential expression backend.",
+      "enum": [
+        "edgeR",
+        "DESeq2"
+      ],
+      "default": "edgeR"
+    },
+    "organism": {
+      "type": "string",
+      "description": "Organism used by enrichment analysis.",
+      "enum": [
+        "human",
+        "mouse"
+      ],
+      "default": "human"
+    },
+    "skip_trimming": {
+      "type": "boolean",
+      "description": "Skip fastp trimming and use raw reads for quantification.",
+      "default": false
+    },
+    "skip_enrichment": {
+      "type": "boolean",
+      "description": "Skip downstream enrichment analysis.",
+      "default": false
+    },
+    "save_trimmed": {
+      "type": "boolean",
+      "description": "Publish trimmed FASTQ files to the output directory.",
+      "default": false
+    },
+    "min_trimmed_reads": {
+      "type": "integer",
+      "description": "Minimum number of reads expected after trimming.",
+      "minimum": 0,
+      "default": 1000000
+    }
+  },
+  "required": [
+    "project_name",
+    "outdir",
+    "metadata_file",
+    "comparisons"
+  ],
+  "additionalProperties": true
+}

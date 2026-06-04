@@ -23,9 +23,9 @@ Output:
 
 Main steps:
 
-1. FastQC (pre-trim)
+1. FastQC (raw reads)
 2. fastp trimming
-3. FastQC (post-trim)
+3. FastQC (trimmed reads)
 4. Kallisto quantification
 5. MultiQC aggregation
 6. Differential expression (edgeR)
@@ -37,11 +37,17 @@ Main steps:
 rna_seq_pipeline/
 ├── main.nf
 ├── nextflow.config
+├── nextflow_schema.json
+├── .nf-core.yml
 ├── conf/
 │   ├── base.config
 │   ├── modules.config
 │   └── test.config
 ├── modules/
+│   └── nf-core/
+├── subworkflows/
+│   ├── local/
+│   └── nf-core/
 ├── scripts/
 ├── params/
 │   ├── test.yaml
@@ -71,7 +77,7 @@ rna_seq_pipeline/
 
 Template file:
 
-- [template/sample_metadata.csv](/mnt/d/shared/rna_seq_pipeline/template/sample_metadata.csv:1)
+- [template/metadata_template.csv](./template/metadata_template.csv)
 
 Example row:
 
@@ -83,12 +89,13 @@ sample_control_1,/data/project/raw/sample_control_1_R1.fastq.gz,/data/project/ra
 
 Template file:
 
-- [template/params_template.yaml](/mnt/d/shared/rna_seq_pipeline/template/params_template.yaml:1)
+- [template/params_template.yaml](./template/params_template.yaml)
 
 Minimum required params:
 
 - `project_name`
 - `outdir`
+- `metadata_file`
 - `comparisons`
 
 ## Usage
@@ -136,9 +143,9 @@ nextflow run main.nf \
 
 All outputs are written under `outdir` defined in your params file, typically:
 
-- `fastqc_pre/`
+- `fastqc_raw/`
 - `fastp_trim/`
-- `fastqc_post/`
+- `fastqc_trim/`
 - `kallisto_quant/`
 - `multiqc/`
 - `de_analysis/`

@@ -33,6 +33,7 @@ de_method: edgeR                                      # edgeR | DESeq2
 organism: human                                       # human | mouse  (passed to gsea/ora scripts)
 
 # === Optional flags ===
+# save_trimmed:    false
 # skip_trimming:   false
 # skip_enrichment: false
 # min_trimmed_reads: 1000000

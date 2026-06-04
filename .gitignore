@@ -8,3 +8,4 @@ reference/*
 !reference/.gitkeep
 repomix-output.xml
 .codex
+scripts/prepare_gse52778_test_data.sh

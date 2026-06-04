@@ -1,3 +1,5 @@
+include { KALLISTO_INDEX as kallisto_index } from '../../../modules/nf-core/kallisto/index/main'
+
 process download_reference_files {
 
     tag { ref_dir }
@@ -127,14 +129,13 @@ process prepare_transcript_fasta {
     """
 }
 
-process prepare_kallisto_index {
+process store_kallisto_index {
 
     tag { kallisto_index_path }
 
     input:
-    path transcripts_fasta
+    path generated_index
     val kallisto_index_path
-    val auto_download
 
     output:
     path "resolved_reference/kallisto_index.idx", emit: kallisto_index
@@ -144,15 +145,7 @@ process prepare_kallisto_index {
     set -eu
 
     mkdir -p "\$(dirname "${kallisto_index_path}")"
-
-    if [ ! -f "${kallisto_index_path}" ]; then
-        if [ "${auto_download}" != "true" ]; then
-            echo "ERROR: Missing kallisto index and reference_auto_download=false: ${kallisto_index_path}" >&2
-            exit 1
-        fi
-
-        kallisto index -i "${kallisto_index_path}" "${transcripts_fasta}"
-    fi
+    cp "${generated_index}" "${kallisto_index_path}"
 
     if [ ! -f "${kallisto_index_path}" ]; then
         echo "ERROR: Kallisto index was not created: ${kallisto_index_path}" >&2
@@ -164,7 +157,7 @@ process prepare_kallisto_index {
     """
 }
 
-workflow prepare_reference {
+workflow PREPARE_REFERENCE {
 
     take:
     ref_dir
@@ -201,13 +194,28 @@ workflow prepare_reference {
         auto_download
     )
 
-    generated_index = prepare_kallisto_index(
-        generated_transcripts.transcripts_fasta,
-        kallisto_index_path,
-        auto_download
-    )
+    if (file(kallisto_index_path).exists()) {
+        generated_index_path = Channel.value(file(kallisto_index_path, checkIfExists: true))
+    } else {
+        if (!(auto_download in [true, 'true'])) {
+            error "Missing kallisto index and reference_auto_download=false: ${kallisto_index_path}"
+        }
+
+        generated_index = kallisto_index(
+            generated_transcripts.transcripts_fasta.map { fasta ->
+                tuple([id: 'reference'], fasta)
+            }
+        )
+
+        stored_index = store_kallisto_index(
+            generated_index.index.map { _meta, index_file -> index_file },
+            kallisto_index_path
+        )
+
+        generated_index_path = stored_index.kallisto_index
+    }
 
     emit:
-    kallisto_index = generated_index.kallisto_index
+    kallisto_index = generated_index_path
     tx2gene = generated_tx2gene.tx2gene
 }
