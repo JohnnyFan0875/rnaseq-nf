@@ -6,31 +6,32 @@
 # ──────────────────────────────────────────────────────────────────────────────
 
 # === Required ===
-project_name: test                              # Used to locate data/my_project/
-outdir: data/test/results                          # All pipeline outputs go here
+project_name: test # Used to locate data/my_project/
+outdir: data/test/results # All pipeline outputs go here
+metadata_file: ./data/test/metadata/sample_metadata.csv
 
 # === Input ===
-# metadata_file is optional; defaults to data/<project_name>/metadata/sample_metadata.csv
-# metadata_file: ./data/my_project/metadata/sample_metadata.csv
+# metadata_file is required
 
 # === Comparisons (required) ===
 comparisons:
-  - name: treatment_vs_control                        # Label used in output files & plots
-    control: control                                  # Group name in metadata 'group' column
-    non_control: treatment                            # Group name in metadata 'group' column
+  - name: treatment_vs_control # Label used in output files & plots
+    control: control # Group name in metadata 'group' column
+    non_control: treatment # Group name in metadata 'group' column
 
 # === Reference ===
 # ref_dir: ./reference                                # defaults to <pipeline>/reference
-# kallisto_index: ./reference/transcripts.GRCh38.113.fa.idx  # inferred from ref_dir
+# reference_auto_download: true                       # if required files are missing, download / generate them automatically
 
 # === Quantification ===
 kallisto_threads: 4
 
 # === Differential expression ===
-de_method: edgeR                                      # edgeR | DESeq2
+de_method: edgeR # edgeR | DESeq2
 
 # === Enrichment analysis ===
-organism: human                                       # human | mouse  (passed to gsea/ora scripts)
+organism: human # human | mouse  (passed to gsea/ora scripts)
+
 
 # === Optional flags ===
 # skip_trimming:   false

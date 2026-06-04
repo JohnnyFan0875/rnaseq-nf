@@ -13,7 +13,7 @@ option_list <- list(
   make_option("--metadata", type = "character"),
   make_option("--comparisons", type = "character"),
   make_option("--out_dir", type = "character"),
-  make_option("--ref_dir", type = "character"),
+  make_option("--tx2gene", type = "character"),
   make_option("--script_dir", type = "character")
 )
 
@@ -45,7 +45,7 @@ comparisons <- fromJSON(opt$comparisons)
 comparisons <- split(comparisons, seq(nrow(comparisons)))
 
 # Load tx2gene mapping
-tx2gene <- read_tsv(file.path(opt$ref_dir, "tx2gene.tsv"), col_names = c("transcript_id", "gene_id")) # reconfirm position
+tx2gene <- read_tsv(opt$tx2gene, col_names = c("transcript_id", "gene_id"))
 
 # Import transcript-level estimates
 txi <- tximport(files, type = "kallisto", tx2gene = tx2gene)

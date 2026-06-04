@@ -9,7 +9,7 @@ process de_analysis {
     val  comparisons_json
     val  method
     path script_dir
-    path ref_dir
+    path tx2gene_file
 
     output:
     path "DEG_${method}", emit: deg_results
@@ -32,7 +32,7 @@ process de_analysis {
         --metadata ${metadata_file} \\
         --comparisons '${comparisons_json}' \\
         --out_dir DEG_${method} \\
-        --ref_dir ${ref_dir} \\
+        --tx2gene ${tx2gene_file} \\
         --script_dir ${script_dir}
     """
 }

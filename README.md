@@ -40,7 +40,6 @@ rna_seq_pipeline/
 ├── conf/
 │   ├── base.config
 │   ├── modules.config
-│   ├── slurm.config
 │   └── test.config
 ├── modules/
 ├── scripts/
@@ -52,7 +51,7 @@ rna_seq_pipeline/
 │   └── metadata_template.csv
 ├── data/
 │   └── <project_name>/
-│       ├── raw/
+│       ├── logs/
 │       ├── metadata/
 │       │   └── sample_metadata.csv
 │       └── results/
@@ -64,57 +63,27 @@ rna_seq_pipeline/
 - Nextflow `>= 24.10.0`
 - One execution environment:
   - Docker (recommended), or
-  - Singularity, or
   - Local binaries installed (`fastqc`, `fastp`, `kallisto`, `multiqc`, `Rscript`)
-
-## Install
-
-```bash
-bash scripts/install.sh
-```
-
-Reference index helper:
-
-- [scripts/kallisto_index.sh](./scripts/kallisto_index.sh)
 
 ## Prepare Input Data
 
-1. Create project folders and copy templates
+### Metadata
 
-```bash
-project_name="my_project"
-mkdir -p data/${project_name}/{raw,metadata,results}
-cp template/params_template.yaml params/${project_name}.yaml
-cp template/metadata_template.csv data/${project_name}/metadata/sample_metadata.csv
-unset project_name
-```
+Template file:
 
-2. Put FASTQ files in:
-
-- `data/<project_name>/raw/`
-
-3. Edit metadata CSV:
-
-- `data/<project_name>/metadata/sample_metadata.csv`
-
-Metadata columns (required):
-
-- `sample_id`
-- `fastq1`
-- `fastq2`
-- `group`
+- [template/sample_metadata.csv](/mnt/d/shared/rna_seq_pipeline/template/sample_metadata.csv:1)
 
 Example row:
 
 ```csv
-sample_control_1,sample_control_1_R1.fastq.gz,sample_control_1_R2.fastq.gz,control
+sample_control_1,/data/project/raw/sample_control_1_R1.fastq.gz,/data/project/raw/sample_control_1_R2.fastq.gz,control
 ```
 
-## Configure Parameters
+## Configure Parameter file
 
-Edit your copied params file:
+Template file:
 
-- `params/<project_name>.yaml`
+- [template/params_template.yaml](/mnt/d/shared/rna_seq_pipeline/template/params_template.yaml:1)
 
 Minimum required params:
 
@@ -122,55 +91,45 @@ Minimum required params:
 - `outdir`
 - `comparisons`
 
-Important notes:
-
-- If `metadata_file` is omitted, default is:
-  - `data/<project_name>/metadata/sample_metadata.csv`
-- `de_method` currently supports `edgeR` in this repo.
-
 ## Usage
 
 ### Standard run (Docker)
 
 ```bash
-nextflow run main.nf -profile docker -params-file params/<project_name>.yaml
+nextflow run main.nf \
+  -profile docker \
+  -params-file <param_file>.yaml
 ```
 
 ### Resume run
 
 ```bash
-nextflow run main.nf -profile docker -params-file params/<project_name>.yaml -resume
+nextflow run main.nf \
+  -profile docker \
+  -params-file <param_file>.yaml \
+  -resume
 ```
 
-### Local run (no container)
+### Local run
 
 ```bash
-nextflow run main.nf -profile local -params-file params/<project_name>.yaml
+nextflow run main.nf \
+  -profile local \
+  -params-file <param_file>.yaml
 ```
 
 ## Test Dataset
 
-This repo already includes test data under `data/test` and a test params file at
-`params/test.yaml`.
-
-Run test:
-
 ```bash
-nextflow run main.nf -profile docker,test -params-file params/test.yaml
+nextflow run main.nf \
+  -profile docker,test \
+  -params-file params/test.yaml
 ```
-
-Notes:
-
-- `conf/test.config` is intentionally minimal and mainly reserved for optional
-  profile-level overrides (resource / executor / container behavior).
-- Dataset paths and biological params should stay in `params/test.yaml`.
 
 ## Profiles
 
 - `docker`: run with Docker containers
-- `singularity`: run with Singularity
 - `local`: run on host without container
-- `slurm`: adds HPC SLURM executor settings (typically with `-profile singularity,slurm`)
 - `test`: optional profile-specific overrides for testing
 
 ## Outputs

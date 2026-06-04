@@ -8,10 +8,10 @@
 # === Required ===
 project_name: GSE52778_subsample_phase2                              # Used to locate data/my_project/
 outdir: data/GSE52778_subsample_phase2/results                          # All pipeline outputs go here
+metadata_file: ./data/GSE52778_subsample_phase2/metadata/sample_metadata.csv
 
 # === Input ===
-# metadata_file is optional; defaults to data/<project_name>/metadata/sample_metadata.csv
-# metadata_file: ./data/my_project/metadata/sample_metadata.csv
+# metadata_file is required
 
 # === Comparisons (required) ===
 comparisons:
@@ -21,7 +21,7 @@ comparisons:
 
 # === Reference ===
 # ref_dir: ./reference                                # defaults to <pipeline>/reference
-# kallisto_index: ./reference/transcripts.GRCh38.113.fa.idx  # inferred from ref_dir
+# reference_auto_download: true                       # if required files are missing, download / generate them automatically
 
 # === Quantification ===
 kallisto_threads: 4

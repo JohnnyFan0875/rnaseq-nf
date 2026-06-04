@@ -1,11 +1,24 @@
 #!/usr/bin/env Rscript
 
+library(optparse)
+
+option_list <- list(
+  make_option("--output", type = "character", default = "reference/tx2gene.tsv")
+)
+
+opt <- parse_args(OptionParser(option_list = option_list))
+
 # Load required library
 if (!requireNamespace("biomaRt", quietly = TRUE)) {
   install.packages("BiocManager")
   BiocManager::install("biomaRt")
 }
 library(biomaRt)
+
+output_dir <- dirname(opt$output)
+if (!dir.exists(output_dir)) {
+  dir.create(output_dir, recursive = TRUE)
+}
 
 # Connect to Ensembl BioMart for human genes
 mart <- useMart("ensembl", dataset = "hsapiens_gene_ensembl")
@@ -23,11 +36,11 @@ tx2gene$ensembl_gene_id <- sub("\\..*$", "", tx2gene$ensembl_gene_id)
 # Write to a tab-separated file
 write.table(
   tx2gene,
-  file = "reference/tx2gene.tsv",
+  file = opt$output,
   sep = "\t",
   quote = FALSE,
   row.names = FALSE,
   col.names = FALSE
 )
 
-cat("Transcript-to-gene mapping file 'tx2gene.tsv' created successfully.\n")
+cat(sprintf("Transcript-to-gene mapping file created successfully: %s\n", opt$output))
