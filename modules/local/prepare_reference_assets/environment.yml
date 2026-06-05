@@ -1,0 +1,9 @@
+---
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - bioconda::kallisto=0.51.1
+  - bioconda::gffread=0.12.7
+  - conda-forge::wget=1.21.4
+  - conda-forge::gzip=1.13

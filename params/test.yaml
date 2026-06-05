@@ -5,23 +5,20 @@
 #   nextflow run main.nf -profile docker -params-file params/my_project.yaml
 # ──────────────────────────────────────────────────────────────────────────────
 
-# === Required ===
+# === Project ===
 project_name: test # Used to locate data/my_project/
 outdir: data/test/results # All pipeline outputs go here
-metadata_file: ./data/test/metadata/sample_metadata.csv
+metadata_file: data/test/metadata/sample_metadata.csv # Sample metadata file
 
-# === Input ===
-# metadata_file is required
-
-# === Comparisons (required) ===
+# === Comparisons ===
 comparisons:
-  - name: treatment_vs_control # Label used in output files & plots
-    control: control # Group name in metadata 'group' column
-    non_control: treatment # Group name in metadata 'group' column
+  - name: dex_vs_untreated # Label used in output files & plots
+    control: untreated # Group name in metadata 'group' column
+    non_control: dex # Group name in metadata 'group' column
 
 # === Reference ===
-# ref_dir: ./reference                                # defaults to <pipeline>/reference
-# reference_auto_download: true                       # if required files are missing, download / generate them automatically
+ref_dir: reference # defaults to <pipeline>/reference
+reference_auto_download: true # if required files are missing, download / generate them automatically
 
 # === Quantification ===
 kallisto_threads: 4
@@ -31,7 +28,6 @@ de_method: edgeR # edgeR | DESeq2
 
 # === Enrichment analysis ===
 organism: human # human | mouse  (passed to gsea/ora scripts)
-
 
 # === Optional flags ===
 # save_trimmed:    false

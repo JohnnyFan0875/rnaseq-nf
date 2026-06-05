@@ -13,7 +13,7 @@ option_list <- list(
   make_option("--metadata", type = "character"),
   make_option("--comparisons", type = "character"),
   make_option("--out_dir", type = "character"),
-  make_option("--tx2gene", type = "character"),
+  make_option("--gtf", type = "character"),
   make_option("--script_dir", type = "character")
 )
 
@@ -22,6 +22,7 @@ opt$quant_files <- strsplit(opt$quant_files, ",")[[1]]
 cat('Starting edgeR differential expression analysis\n')
 
 source(file.path(opt$script_dir, "plot_utils_de.R"))
+source(file.path(opt$script_dir, "gtf_utils.R"))
 
 # Read metadata
 metadata <- read_csv(opt$metadata)
@@ -44,11 +45,11 @@ files <- setNames(opt$quant_files, sample_ids_from_files)
 comparisons <- fromJSON(opt$comparisons)
 comparisons <- split(comparisons, seq(nrow(comparisons)))
 
-# Load tx2gene mapping
-tx2gene <- read_tsv(opt$tx2gene, col_names = c("transcript_id", "gene_id"))
+# Build the transcript-to-gene map directly from the reference GTF
+transcript_gene_map <- build_transcript_gene_map_from_gtf(opt$gtf)
 
 # Import transcript-level estimates
-txi <- tximport(files, type = "kallisto", tx2gene = tx2gene)
+txi <- tximport(files, type = "kallisto", tx2gene = transcript_gene_map)
 metadata <- metadata[colnames(txi$counts), ]
 
 # Extract gene IDs from rownames

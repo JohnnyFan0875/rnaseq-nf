@@ -3,13 +3,24 @@ nextflow.enable.dsl=2
 import groovy.json.JsonOutput
 
 // ── Include modules ───────────────────────────────────────────────────────────
-include { FASTQ_TRIM_FASTP_FASTQC as fastq_preprocess } from './subworkflows/nf-core/fastq_trim_fastp_fastqc/main'
-include { MULTIQC                 as multiqc          } from './modules/nf-core/multiqc/main'
-include { KALLISTO_QUANT          as kallisto         } from './modules/nf-core/kallisto/quant/main'
-include { PREPARE_REFERENCE       as prepare_reference } from './subworkflows/local/prepare_reference/main'
-include { de_analysis                                 } from './modules/de_analysis.nf'
-include { gsea                                        } from './modules/gsea.nf'
-include { ora                                         } from './modules/ora.nf'
+include { FASTQC as FASTQC_RAW                           } from './modules/nf-core/fastqc/main'
+include { FASTQC as FASTQC_TRIM                          } from './modules/nf-core/fastqc/main'
+include { FASTP                                          } from './modules/nf-core/fastp/main'
+include { MULTIQC                 as multiqc           } from './modules/nf-core/multiqc/main'
+include { KALLISTO_QUANT          as kallisto          } from './modules/nf-core/kallisto/quant/main'
+include { prepare_reference_assets                        } from './modules/local/prepare_reference_assets/main'
+include { deg_analysis                                 } from './modules/local/deg_analysis/main'
+include { gsea                                         } from './modules/local/gsea/main'
+include { ora                                          } from './modules/local/ora/main'
+
+def getFastpReadsAfterFiltering(json_file) {
+    if (workflow.stubRun) {
+        return 1
+    }
+
+    def json = new groovy.json.JsonSlurper().parseText(json_file.text).get('summary')
+    return json['after_filtering']['total_reads'].toLong()
+}
 
 // ── Parameter validation ──────────────────────────────────────────────────────
 if (!params.project_name) {
@@ -58,12 +69,29 @@ def resolved_ref_dir = params.ref_dir
 def resolved_gtf = "${resolved_ref_dir}/Homo_sapiens.GRCh38.113.gtf"
 def resolved_genome_fasta = "${resolved_ref_dir}/Homo_sapiens.GRCh38.dna.primary_assembly.fa"
 def resolved_transcripts_fasta = "${resolved_ref_dir}/transcripts.GRCh38.113.fa"
-def resolved_kallisto_index = "${resolved_ref_dir}/transcripts.GRCh38.113.fa.idx"
-def resolved_tx2gene = "${resolved_ref_dir}/tx2gene.tsv"
+def resolved_kallisto_index = "${resolved_ref_dir}/transcripts.GRCh38.113.kallisto.idx"
 def resolved_gtf_url = params.gtf_url
     ?: 'https://ftp.ensembl.org/pub/release-113/gtf/homo_sapiens/Homo_sapiens.GRCh38.113.gtf.gz'
 def resolved_genome_fasta_url = params.genome_fasta_url
     ?: 'https://ftp.ensembl.org/pub/release-113/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz'
+def persisted_reference_candidates = [
+    resolved_gtf,
+    resolved_genome_fasta,
+    resolved_transcripts_fasta,
+    resolved_kallisto_index
+]
+def has_persisted_reference_assets = [
+    resolved_gtf,
+    resolved_genome_fasta,
+    resolved_transcripts_fasta,
+    resolved_kallisto_index
+].every { candidate ->
+    def persisted_file = file(candidate)
+    persisted_file.exists() && persisted_file.size() > 0
+}
+def existing_reference_files = persisted_reference_candidates
+    .collect { file(it) }
+    .findAll { persisted_file -> persisted_file.exists() && persisted_file.size() > 0 }
 
 // ── Main workflow ─────────────────────────────────────────────────────────────
 workflow {
@@ -74,18 +102,24 @@ workflow {
 
     def comparisons_json = JsonOutput.toJson(params.comparisons)
 
-    prepared_reference = prepare_reference(
-        resolved_ref_dir,
-        resolved_gtf,
-        resolved_genome_fasta,
-        resolved_transcripts_fasta,
-        resolved_kallisto_index,
-        resolved_tx2gene,
-        resolved_gtf_url,
-        resolved_genome_fasta_url,
-        params.reference_auto_download,
-        file("${projectDir}/scripts/")
-    )
+    prepared_reference = has_persisted_reference_assets
+        ? [
+            gtf              : Channel.value(file(resolved_gtf, checkIfExists: true)),
+            genome_fasta     : Channel.value(file(resolved_genome_fasta, checkIfExists: true)),
+            transcripts_fasta: Channel.value(file(resolved_transcripts_fasta, checkIfExists: true)),
+            kallisto_index   : Channel.value(file(resolved_kallisto_index, checkIfExists: true))
+        ]
+        : prepare_reference_assets(
+            resolved_ref_dir,
+            existing_reference_files,
+            resolved_gtf,
+            resolved_genome_fasta,
+            resolved_transcripts_fasta,
+            resolved_kallisto_index,
+            resolved_gtf_url,
+            resolved_genome_fasta_url,
+            params.reference_auto_download
+        )
 
     // Build sample channel from metadata CSV
     samples = Channel
@@ -111,16 +145,41 @@ workflow {
         }
 
     // ── Read QC and trimming ──────────────────────────────────────────────────
-    qc_trimmed_reads = fastq_preprocess(
-        samples.map { meta, reads -> tuple(meta, reads, []) },
-        false,
-        false,
-        false,
-        params.skip_trimming,
-        false
-    )
+    reads_with_adapters = samples.map { meta, reads -> tuple(meta, reads, []) }
+    reads_for_fastqc_raw = reads_with_adapters.map { meta, reads, _adapter_fasta -> tuple(meta, reads) }
 
-    reads_for_quant = qc_trimmed_reads.reads
+    FASTQC_RAW(reads_for_fastqc_raw)
+
+    trim_json = Channel.empty()
+    trim_html = Channel.empty()
+    trim_log = Channel.empty()
+    fastqc_trim_zip = Channel.empty()
+
+    if (params.skip_trimming) {
+        reads_for_quant = reads_for_fastqc_raw
+    } else {
+        FASTP(
+            reads_with_adapters,
+            false,
+            false,
+            false
+        )
+
+        trim_json = FASTP.out.json
+        trim_html = FASTP.out.html
+        trim_log = FASTP.out.log
+
+        reads_for_quant = FASTP.out.reads
+            .join(FASTP.out.json)
+            .map { meta, reads, json ->
+                if (getFastpReadsAfterFiltering(json) > 0) {
+                    tuple(meta, reads)
+                }
+            }
+
+        FASTQC_TRIM(reads_for_quant)
+        fastqc_trim_zip = FASTQC_TRIM.out.zip
+    }
 
     // ── Kallisto quantification ───────────────────────────────────────────────
     kallisto_out = kallisto(
@@ -133,12 +192,12 @@ workflow {
     )
 
     // ── MultiQC ───────────────────────────────────────────────────────────────
-    all_qc_reports = qc_trimmed_reads.fastqc_raw_zip
+    all_qc_reports = FASTQC_RAW.out.zip
         .map { _meta, report -> report }
-        .mix(qc_trimmed_reads.fastqc_trim_zip.map { _meta, report -> report })
-        .mix(qc_trimmed_reads.trim_json.map { _meta, report -> report })
-        .mix(qc_trimmed_reads.trim_html.map { _meta, report -> report })
-        .mix(qc_trimmed_reads.trim_log.map { _meta, report -> report })
+        .mix(fastqc_trim_zip.map { _meta, report -> report })
+        .mix(trim_json.map { _meta, report -> report })
+        .mix(trim_html.map { _meta, report -> report })
+        .mix(trim_log.map { _meta, report -> report })
         .mix(kallisto_out.log.map { _meta, log_file -> log_file })
         .collect()
 
@@ -152,14 +211,14 @@ workflow {
     quant_sample_ids = kallisto_out.results.map { meta, _dir -> meta.id }.collect()
     quant_abundance  = kallisto_out.results.map { _meta, dir -> dir }.collect()
 
-    de_results = de_analysis(
+    de_results = deg_analysis(
         quant_sample_ids,
         quant_abundance,
         file(resolved_metadata),
         Channel.value(comparisons_json),
         Channel.value(params.de_method),
         file("${projectDir}/scripts/"),
-        prepared_reference.tx2gene
+        prepared_reference.gtf
     )
 
     // ── Enrichment analysis ───────────────────────────────────────────────────

@@ -6,6 +6,11 @@
 It processes paired-end FASTQ files through QC, trimming, quantification,
 differential expression, and optional enrichment analysis.
 
+Gene-level differential expression is computed from kallisto transcript estimates
+using transcript-to-gene mappings derived directly from the reference GTF.
+Reference assets are materialized by a single local `prepare_reference_assets`
+step that manages download, transcript FASTA generation, and kallisto indexing.
+
 ## Pipeline Summary
 
 Input:
@@ -44,8 +49,6 @@ rna_seq_pipeline/
 │   ├── modules.config
 │   └── test.config
 ├── modules/
-│   └── nf-core/
-├── subworkflows/
 │   ├── local/
 │   └── nf-core/
 ├── scripts/
@@ -125,6 +128,14 @@ nextflow run main.nf \
   -params-file <param_file>.yaml
 ```
 
+### Conda run
+
+```bash
+nextflow run main.nf \
+  -profile conda \
+  -params-file <param_file>.yaml
+```
+
 ## Test Dataset
 
 ```bash
@@ -136,6 +147,7 @@ nextflow run main.nf \
 ## Profiles
 
 - `docker`: run with Docker containers
+- `conda`: run with Conda environments defined by modules
 - `local`: run on host without container
 - `test`: optional profile-specific overrides for testing
 
@@ -148,5 +160,5 @@ All outputs are written under `outdir` defined in your params file, typically:
 - `fastqc_trim/`
 - `kallisto_quant/`
 - `multiqc/`
-- `de_analysis/`
+- `deg_analysis/`
 - `enrichment_analysis/` (when enrichment is enabled)
