@@ -21,7 +21,9 @@ ref_dir: reference # defaults to <pipeline>/reference
 reference_auto_download: true # if required files are missing, download / generate them automatically
 
 # === Quantification ===
+quant_strategy: salmon
 kallisto_threads: 4
+salmon_threads: 4
 
 # === Differential expression ===
 de_method: edgeR # edgeR | DESeq2
@@ -32,5 +34,5 @@ organism: human # human | mouse  (passed to gsea/ora scripts)
 # === Optional flags ===
 # save_trimmed:    false
 # skip_trimming:   false
-# skip_enrichment: false
+skip_enrichment: true
 # min_trimmed_reads: 1000000

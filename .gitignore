@@ -3,6 +3,7 @@
 work/
 data/*
 !data/test
+data/test/results/
 reference/*
 !reference/.gitkeep
 repomix-output.xml

@@ -67,9 +67,24 @@
       "type": "string",
       "description": "Source URL for the reference genome FASTA file."
     },
+    "quant_strategy": {
+      "type": "string",
+      "description": "Transcript quantification backend.",
+      "enum": [
+        "kallisto",
+        "salmon"
+      ],
+      "default": "kallisto"
+    },
     "kallisto_threads": {
       "type": "integer",
       "description": "Number of threads for kallisto quantification and indexing.",
+      "minimum": 1,
+      "default": 4
+    },
+    "salmon_threads": {
+      "type": "integer",
+      "description": "Number of threads for Salmon quantification and indexing.",
       "minimum": 1,
       "default": 4
     },

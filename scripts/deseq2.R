@@ -9,7 +9,9 @@ library(org.Hs.eg.db)
 library(AnnotationDbi)
 
 option_list <- list(
-  make_option("--quant_files", type = "character"),
+  make_option("--input_mode", type = "character"),
+  make_option("--quant_type", type = "character"),
+  make_option("--expression_inputs", type = "character"),
   make_option("--metadata", type = "character"),
   make_option("--comparisons", type = "character"),
   make_option("--out_dir", type = "character"),
@@ -18,7 +20,7 @@ option_list <- list(
 )
 
 opt <- parse_args(OptionParser(option_list = option_list))
-opt$quant_files <- strsplit(opt$quant_files, ",")[[1]]
+opt$expression_inputs <- strsplit(opt$expression_inputs, ",")[[1]]
 cat("Starting DESeq2 differential expression analysis\n")
 
 source(file.path(opt$script_dir, "plot_utils_de.R"))
@@ -27,24 +29,48 @@ source(file.path(opt$script_dir, "gtf_utils.R"))
 metadata <- read_csv(opt$metadata)
 rownames(metadata) <- metadata$sample_id
 
-sample_ids_from_files <- sapply(opt$quant_files, function(x) {
-  parts <- strsplit(x, "/")[[1]]
-  parts[length(parts) - 1]
-})
-
-if (!all(sample_ids_from_files %in% metadata$sample_id)) {
-  stop("Some sample IDs from quant_files do not match metadata$sample_id")
-}
-
-files <- setNames(opt$quant_files, sample_ids_from_files)
 comparisons <- fromJSON(opt$comparisons)
 comparisons <- split(comparisons, seq(nrow(comparisons)))
 
 transcript_gene_map <- build_transcript_gene_map_from_gtf(opt$gtf)
-txi <- tximport(files, type = "kallisto", tx2gene = transcript_gene_map)
-metadata <- metadata[colnames(txi$counts), ]
 
-gene_ids <- rownames(txi$counts)
+if (opt$input_mode == "tximport") {
+  sample_ids_from_files <- sapply(opt$expression_inputs, function(x) {
+    parts <- strsplit(x, "/")[[1]]
+    parts[length(parts) - 1]
+  })
+
+  if (!all(sample_ids_from_files %in% metadata$sample_id)) {
+    stop("Some sample IDs from expression_inputs do not match metadata$sample_id")
+  }
+
+  files <- setNames(opt$expression_inputs, sample_ids_from_files)
+  txi <- tximport(files, type = opt$quant_type, tx2gene = transcript_gene_map)
+  metadata <- metadata[colnames(txi$counts), ]
+  dds_all <- DESeqDataSetFromTximport(txi = txi, colData = metadata, design = ~ group)
+} else if (opt$input_mode == "gene_counts") {
+  if (length(opt$expression_inputs) != 1) {
+    stop("gene_counts mode expects exactly one featureCounts matrix")
+  }
+
+  counts_tbl <- read.delim(opt$expression_inputs[[1]], comment.char = "#", check.names = FALSE)
+  count_columns <- setdiff(colnames(counts_tbl), c("Geneid", "Chr", "Start", "End", "Strand", "Length"))
+  sample_ids_from_files <- sub("\\.(Aligned\\.sortedByCoord\\.out|sorted)\\.bam$", "", basename(count_columns))
+
+  if (!all(sample_ids_from_files %in% metadata$sample_id)) {
+    stop("Some sample IDs from featureCounts columns do not match metadata$sample_id")
+  }
+
+  count_matrix <- as.matrix(counts_tbl[, count_columns, drop = FALSE])
+  rownames(count_matrix) <- counts_tbl$Geneid
+  colnames(count_matrix) <- sample_ids_from_files
+  metadata <- metadata[colnames(count_matrix), ]
+  dds_all <- DESeqDataSetFromMatrix(countData = round(count_matrix), colData = metadata, design = ~ group)
+} else {
+  stop(sprintf("Unsupported input_mode: %s", opt$input_mode))
+}
+
+gene_ids <- rownames(dds_all)
 gene_symbols <- mapIds(org.Hs.eg.db,
                        keys = gene_ids,
                        column = "SYMBOL",
@@ -54,7 +80,6 @@ annotation_df <- data.frame(gene_id = gene_ids, gene_symbol = gene_symbols, row.
 
 if (!dir.exists(opt$out_dir)) dir.create(opt$out_dir, recursive = TRUE)
 
-dds_all <- DESeqDataSetFromTximport(txi = txi, colData = metadata, design = ~ group)
 keep_all <- rowSums(counts(dds_all) >= 10) >= 2
 dds_all <- dds_all[keep_all, ]
 vsd <- vst(dds_all, blind = TRUE)
@@ -86,13 +111,18 @@ for (cmp in comparisons) {
   cmp_metadata <- metadata[metadata$group %in% c(cmp$control, cmp$non_control), , drop = FALSE]
   cmp_metadata$group <- factor(cmp_metadata$group, levels = c(cmp$control, cmp$non_control))
 
-  cmp_counts <- txi$counts[, rownames(cmp_metadata), drop = FALSE]
-  cmp_abundance <- txi$abundance[, rownames(cmp_metadata), drop = FALSE]
-  cmp_length <- txi$length[, rownames(cmp_metadata), drop = FALSE]
+  if (opt$input_mode == "tximport") {
+    cmp_counts <- txi$counts[, rownames(cmp_metadata), drop = FALSE]
+    cmp_abundance <- txi$abundance[, rownames(cmp_metadata), drop = FALSE]
+    cmp_length <- txi$length[, rownames(cmp_metadata), drop = FALSE]
 
-  cmp_txi <- list(counts = cmp_counts, abundance = cmp_abundance, length = cmp_length, countsFromAbundance = txi$countsFromAbundance)
+    cmp_txi <- list(counts = cmp_counts, abundance = cmp_abundance, length = cmp_length, countsFromAbundance = txi$countsFromAbundance)
+    dds <- DESeqDataSetFromTximport(txi = cmp_txi, colData = cmp_metadata, design = ~ group)
+  } else {
+    cmp_counts <- counts(dds_all, normalized = FALSE)[, rownames(cmp_metadata), drop = FALSE]
+    dds <- DESeqDataSetFromMatrix(countData = round(cmp_counts), colData = cmp_metadata, design = ~ group)
+  }
 
-  dds <- DESeqDataSetFromTximport(txi = cmp_txi, colData = cmp_metadata, design = ~ group)
   keep <- rowSums(counts(dds) >= 10) >= 2
   dds <- dds[keep, ]
   dds <- DESeq(dds)

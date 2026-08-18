@@ -24,7 +24,9 @@ comparisons:
 # reference_auto_download: true                       # if required files are missing, download / generate them automatically
 
 # === Quantification ===
+quant_strategy: kallisto                              # kallisto | salmon
 kallisto_threads: 4
+salmon_threads: 4
 
 # === Differential expression ===
 de_method: edgeR                                      # edgeR | DESeq2

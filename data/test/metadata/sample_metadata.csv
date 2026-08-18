@@ -1,5 +1,5 @@
 sample_id,fastq1,fastq2,group,replicate
-SRR1039508_sub0.05,/mnt/d/rna_seq_pipeline/data/test/raw/SRR1039508_sub0.05_1.fastq.gz,/mnt/d/rna_seq_pipeline/data/test/raw/SRR1039508_sub0.05_2.fastq.gz,untreated,1
-SRR1039509_sub0.05,/mnt/d/rna_seq_pipeline/data/test/raw/SRR1039509_sub0.05_1.fastq.gz,/mnt/d/rna_seq_pipeline/data/test/raw/SRR1039509_sub0.05_2.fastq.gz,dex,1
-SRR1039512_sub0.05,/mnt/d/rna_seq_pipeline/data/test/raw/SRR1039512_sub0.05_1.fastq.gz,/mnt/d/rna_seq_pipeline/data/test/raw/SRR1039512_sub0.05_2.fastq.gz,untreated,2
-SRR1039513_sub0.05,/mnt/d/rna_seq_pipeline/data/test/raw/SRR1039513_sub0.05_1.fastq.gz,/mnt/d/rna_seq_pipeline/data/test/raw/SRR1039513_sub0.05_2.fastq.gz,dex,2
+SRR1039508_sub0.05,data/test/raw/SRR1039508_sub0.05_1.fastq.gz,data/test/raw/SRR1039508_sub0.05_2.fastq.gz,untreated,1
+SRR1039509_sub0.05,data/test/raw/SRR1039509_sub0.05_1.fastq.gz,data/test/raw/SRR1039509_sub0.05_2.fastq.gz,dex,1
+SRR1039512_sub0.05,data/test/raw/SRR1039512_sub0.05_1.fastq.gz,data/test/raw/SRR1039512_sub0.05_2.fastq.gz,untreated,2
+SRR1039513_sub0.05,data/test/raw/SRR1039513_sub0.05_1.fastq.gz,data/test/raw/SRR1039513_sub0.05_2.fastq.gz,dex,2

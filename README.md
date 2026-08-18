@@ -6,10 +6,14 @@
 It processes paired-end FASTQ files through QC, trimming, quantification,
 differential expression, and optional enrichment analysis.
 
-Gene-level differential expression is computed from kallisto transcript estimates
-using transcript-to-gene mappings derived directly from the reference GTF.
-Reference assets are materialized by a single local `prepare_reference_assets`
-step that manages download, transcript FASTA generation, and kallisto indexing.
+Gene-level differential expression is computed from transcript estimates using
+transcript-to-gene mappings derived directly from the reference GTF. The
+quantification backend is selected with `quant_strategy` and currently supports
+`kallisto` and `salmon`.
+
+Reference assets are materialized as needed by local modules that download the
+GTF/genome FASTA, derive a transcript FASTA with `gffread`, and build the
+selected quantification index.
 
 ## Pipeline Summary
 
@@ -22,7 +26,7 @@ Input:
 Output:
 
 - FastQC / fastp / MultiQC reports
-- Kallisto quantification
+- Kallisto or Salmon quantification
 - Differential expression results
 - Optional GSEA / ORA results
 
@@ -31,7 +35,7 @@ Main steps:
 1. FastQC (raw reads)
 2. fastp trimming
 3. FastQC (trimmed reads)
-4. Kallisto quantification
+4. Kallisto or Salmon quantification
 5. MultiQC aggregation
 6. Differential expression (edgeR)
 7. Optional GSEA / ORA
@@ -57,7 +61,7 @@ rna_seq_pipeline/
 │   └── *.yaml
 ├── template/
 │   ├── params_template.yaml
-│   └── metadata_template.csv
+│   └── sample_metadata.csv
 ├── data/
 │   └── <project_name>/
 │       ├── logs/
@@ -72,7 +76,7 @@ rna_seq_pipeline/
 - Nextflow `>= 24.10.0`
 - One execution environment:
   - Docker (recommended), or
-  - Local binaries installed (`fastqc`, `fastp`, `kallisto`, `multiqc`, `Rscript`)
+  - Local binaries installed (`fastqc`, `fastp`, `kallisto`, `salmon`, `gffread`, `multiqc`, `Rscript`)
 
 ## Prepare Input Data
 
@@ -80,12 +84,12 @@ rna_seq_pipeline/
 
 Template file:
 
-- [template/metadata_template.csv](./template/metadata_template.csv)
+- [template/sample_metadata.csv](./template/sample_metadata.csv)
 
 Example row:
 
 ```csv
-sample_control_1,/data/project/raw/sample_control_1_R1.fastq.gz,/data/project/raw/sample_control_1_R2.fastq.gz,control
+sample_control_1,/data/project/raw/sample_control_1_R1.fastq.gz,/data/project/raw/sample_control_1_R2.fastq.gz,control,1
 ```
 
 ## Configure Parameter file
@@ -100,6 +104,12 @@ Minimum required params:
 - `outdir`
 - `metadata_file`
 - `comparisons`
+
+Useful quantification params:
+
+- `quant_strategy`: `kallisto` or `salmon`
+- `kallisto_threads`: threads for kallisto quantification and index building
+- `salmon_threads`: threads for Salmon quantification and index building
 
 ## Usage
 
@@ -158,7 +168,7 @@ All outputs are written under `outdir` defined in your params file, typically:
 - `fastqc_raw/`
 - `fastp_trim/`
 - `fastqc_trim/`
-- `kallisto_quant/`
+- `kallisto_quant/` or `salmon_quant/`
 - `multiqc/`
 - `deg_analysis/`
 - `enrichment_analysis/` (when enrichment is enabled)
