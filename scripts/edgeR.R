@@ -66,6 +66,9 @@ annotation_df <- data.frame(gene_id = gene_ids, gene_symbol = gene_symbols, row.
 # Create output directory
 if (!dir.exists(opt$out_dir)) dir.create(opt$out_dir, recursive = TRUE)
 
+# Save the unfiltered gene-level count matrix for downstream reuse
+write.csv(txi$counts, file = file.path(opt$out_dir, "raw_count.csv"))
+
 # Prepare DGEList for all samples to generate exploratory plots
 group_all <- factor(metadata$group)
 y_all <- DGEList(counts = txi$counts, group = group_all)

@@ -69,8 +69,8 @@ bash scripts/install.sh
 
    ```bash
     mkdir -p data/$project_name/{config,metadata,raw}
-    cp template/project_config.yaml data/$project_name/project_config.yaml
-    cp template/sample_metadata.tsv data/$project_name/sample_metadata.tsv
+   cp template/project_config.yaml data/$project_name/config/project_config.yaml
+   cp template/sample_metadata.csv data/$project_name/metadata/sample_metadata.csv
     unset project_name
    ```
 
@@ -81,13 +81,13 @@ bash scripts/install.sh
 
 3. Modify sample_metadata.csv
 
-   - Location: data/`project_name`/sample_metadata.csv
+   - Location: data/`project_name`/metadata/sample_metadata.csv
    - Format: sample_id,fastq_R1,fastq_R2,group_name,replicate
    - Example: sample_control,sample_control_R1.fastq.gz,sample_control_R2.fastq.gz,control,1
 
 4. Modify project_config.yaml
 
-   - Location: data/`project_name`/project_config.yaml
+   - Location: data/`project_name`/config/project_config.yaml
 
 ## Usage
 

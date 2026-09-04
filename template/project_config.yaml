@@ -1,5 +1,5 @@
 # Project information
-metadata_file: ./data/<project_name>/metadata/sample_metadata.tsv   # Metadata file path; replace <project_name>
+metadata_file: ./data/<project_name>/metadata/sample_metadata.csv   # Metadata file path; replace <project_name>
 
 comparisons:
   - name: treatment_vs_control                                      # Comparison name used in visualization

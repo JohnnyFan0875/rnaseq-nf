@@ -13,6 +13,7 @@ process de_analysis {
 
     output:
     path "DEG_${method}", emit: deg_results
+    path "raw_count.csv", emit: raw_count
 
     publishDir { "${result_dir}/de_analysis/" }, mode: 'copy'
 
@@ -29,6 +30,7 @@ process de_analysis {
         --out_dir DEG_${method} \\
         --ref_dir ${ref_dir} \\
         --script_dir ${script_dir}
+    cp DEG_${method}/raw_count.csv raw_count.csv
     """
 
 }
